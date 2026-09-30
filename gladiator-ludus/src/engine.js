@@ -102,7 +102,7 @@ export class Engine {
     if (this.envTarget) this.envTarget.dispose();
     this.envTarget = this.pmrem.fromScene(this.envScene, 0, 0.1, 500);
     this.scene.environment = this.envTarget.texture;
-    this.scene.environmentIntensity = 0.9;
+    this.scene.environmentIntensity = 1.25;
   }
 
   setupLights() {
