@@ -90,7 +90,7 @@ class FighterView {
       fx.spark(new V(head.x + Math.cos(a) * 0.35, head.y - 0.05, head.z + Math.sin(a) * 0.35), new V(0, 0, 0), { life: 0.35, s0: 0.16, s1: 0.04, color: '#ffe680', grav: 0 });
     }
     if (f.has('regen')) fx.spark(new V(f.x + (Math.random() - 0.5), 0.2, f.z + (Math.random() - 0.5)), new V(0, 2.2, 0), { life: 0.9, s0: 0.13, s1: 0, color: '#8aff9a', grav: -0.3 });
-    if (f.has('frenzy')) fx.spark(new V(f.x + (Math.random() - 0.5) * 0.6, 0.3, f.z + (Math.random() - 0.5) * 0.6), new V(0, 2.4, 0), { life: 0.7, s0: 0.12, s1: 0, color: '#ff4030', grav: -0.3 });
+    if (f.has('frenzy')) { fx.aura(new V(f.x, 0, f.z), 1.8, '#ff3a20'); fx.spark(new V(f.x + (Math.random() - 0.5) * 0.6, 0.3, f.z + (Math.random() - 0.5) * 0.6), new V(0, 2.4, 0), { life: 0.7, s0: 0.12, s1: 0, color: '#ff4030', grav: -0.3 }); }
     if (f.has('dmgUp')) fx.spark(new V(f.x + (Math.random() - 0.5) * 0.6, 0.3, f.z + (Math.random() - 0.5) * 0.6), new V(0, 1.8, 0), { life: 0.6, s0: 0.1, s1: 0, color: '#ffb040', grav: -0.3 });
     if (f.has('armorUp')) fx.spark(new V(f.x + (Math.random() - 0.5) * 0.6, 0.3, f.z + (Math.random() - 0.5) * 0.6), new V(0, 1.6, 0), { life: 0.6, s0: 0.1, s1: 0, color: '#8ac4ff', grav: -0.3 });
     if (f.has('blind')) fx.puff(new V(head.x, head.y - 0.12, head.z), new V((Math.random() - 0.5) * 0.4, 0.3, (Math.random() - 0.5) * 0.4), { life: 0.6, s0: 0.15, s1: 0.4, color: '#d6b88a', alpha: 0.5 });
@@ -379,11 +379,12 @@ export class ArenaView {
         break;
       case 'leapLand': fx.ring(fpos, 5.5, '#ffd28a', 0.6, 0.5); fx.dust(fpos, 22, 5, 1.6); for (let i = 0; i < 16; i++) fx.spark(new V(f.x, 0.2, f.z), new V((Math.random() - 0.5) * 12, Math.random() * 8, (Math.random() - 0.5) * 12), { life: 0.6, s0: 0.14, s1: 0, color: '#ffcf90', grav: 14 }); rig.shake(0.9); au.thud(); this.hitStop = Math.max(this.hitStop, 0.06); break;
       case 'pierce': if (at) { const p = new V(at.x, 1.2, at.z); fx.hitSparks(p, new V(at.x - f.x, 0, at.z - f.z).normalize(), true, '#fff0c0'); } break;
-      case 'frenzy': fx.ring(fpos, 4, '#ff4030', 0.7, 0.4); fx.column(fpos, '#ff3020', 0.8, 4, 0.9); fx.dust(fpos, 8, 3, 1.0); rig.shake(0.4); break;
+      case 'frenzy': fx.fireBurst(fpos, 26, 1.4, '#ff3a20'); fx.ring(fpos, 4, '#ff4030', 0.7, 0.4); fx.column(fpos, '#ff3020', 0.8, 4, 0.9); fx.dust(fpos, 8, 3, 1.0); rig.shake(0.4); break;
       case 'pray': fx.column(fpos, '#fff0a0', 1.0, 8, 1.4); fx.ring(fpos, 3.2, '#fff0a0', 1.0, 0.3); fx.magic(fpos, '#fff0a0', 30, 1.0, 3.5); break;
       case 'quake':
         fx.ring(fpos, 9, '#ffcf8a', 0.75, 0.5); fx.ring(fpos, 5, '#ffffff', 0.5, 0.3); fx.dust(fpos, 34, 8, 2.0);
         for (let i = 0; i < 26; i++) fx.spark(new V(f.x + (Math.random() - 0.5) * 6, 0.2, f.z + (Math.random() - 0.5) * 6), new V((Math.random() - 0.5) * 4, 5 + Math.random() * 8, (Math.random() - 0.5) * 4), { life: 0.9, s0: 0.2, s1: 0.05, color: '#b89a6a', grav: 18 });
+        this.colo.decals.crack(f.x, f.z, 5.5); this.colo.decals.crack(f.x, f.z, 3.5, 0.7); fx.fireBurst(fpos, 14, 4, '#ffb060');
         rig.shake(1.25); this.hitStop = Math.max(this.hitStop, 0.08); au.cast('quake'); break;
       case 'bolt': if (at) { fx.bolt(at); au.bolt(); rig.shake(1.0); this.hud.flash('#b8d8ff', 0.35); this.hitStop = Math.max(this.hitStop, 0.07); this.colo.decals.scuff(at.x, at.z, 70, 0.5); } break;
       case 'taunt': fx.ring(fpos, 8, '#ff5a4a', 0.8, 0.5); fx.column(fpos, '#ff5a4a', 0.7, 3, 0.7); au.horn(); break;

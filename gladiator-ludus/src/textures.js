@@ -280,6 +280,19 @@ export class SandDecals {
     }
     this.dirty = true;
   }
+  crack(x, z, r = 4, a = 0.55) {
+    const [px, py] = this.toPx(x, z);
+    const c = this.ctx; c.strokeStyle = `rgba(40,25,12,${a})`; c.lineCap = 'round';
+    const rad = r / this.worldSize * this.size;
+    for (let i = 0; i < 9; i++) {
+      let ang = (i / 9) * 6.283 + Math.random() * 0.4, cx = px, cy = py;
+      c.lineWidth = 3.5; c.beginPath(); c.moveTo(cx, cy);
+      for (let k = 0; k < 6; k++) { ang += (Math.random() - 0.5) * 0.9; const l = rad / 6 * (0.6 + Math.random() * 0.8); cx += Math.cos(ang) * l; cy += Math.sin(ang) * l; c.lineTo(cx, cy); c.lineWidth = Math.max(1, 3.5 - k * 0.5); }
+      c.stroke();
+    }
+    c.fillStyle = `rgba(60,40,20,${a * 0.4})`; c.beginPath(); c.arc(px, py, rad * 0.25, 0, 6.28); c.fill();
+    this.dirty = true;
+  }
   flush() { if (this.dirty) { this.texture.needsUpdate = true; this.dirty = false; } }
 }
 

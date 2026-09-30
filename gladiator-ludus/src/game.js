@@ -3,7 +3,7 @@
 //  economía incremental, entrenamiento, progreso, guardado.
 // ────────────────────────────────────────────────────────────────────────────
 import {
-  STATS, CLASSES, BASES, RARITY, AFFIXES, SKILLS, SKILL_RARITY, BUILDINGS, VENUES, MODES, BOSSES, SLOT_ORDER,
+  STATS, CLASSES, BASES, QUEST_TYPES, RELICS, RARITY, AFFIXES, SKILLS, SKILL_RARITY, BUILDINGS, VENUES, MODES, BOSSES, SLOT_ORDER,
   LEGENDARY_NAMES, NAMES_M, NAMES_F, NICKS, SKIN_TONES, HAIR_COLORS, TUNIC_COLORS, MAX_SKILL_RANK,
 } from './data.js';
 
@@ -165,6 +165,14 @@ function affixSum(g, key) {
 }
 export function skillRank(g, id) { return g.skills.find(s => s.id === id)?.rank || 0; }
 
+// Conjunto de clase: piezas equipadas que coinciden con el equipo clásico de su clase
+export function setCount(g) {
+  const kit = CLASSES[g.cls]?.kit; if (!kit) return 0;
+  let n = 0;
+  for (const slot of SLOT_ORDER) if (kit[slot] && g.equip[slot]?.base === kit[slot]) n++;
+  return n;
+}
+export const RELIC_MOD = { hp: 0, crit: 0 };
 export function combatStats(g) {
   const s = totalStats(g);
   const wi = g.equip.weapon;
@@ -180,15 +188,18 @@ export function combatStats(g) {
   armor += g.level * 1.2;
   armor *= 1 + rk('thick') * 0.12;
 
-  const hp = (100 + s.vit * 14 + g.level * 9) * (1 + affixSum(g, 'hpPct') + rk('will') * 0.07);
-  const dmgMul = 1 + affixSum(g, 'dmgPct') + rk('iron') * 0.06;
+  const setN = setCount(g);
+  const setB = setN >= 6 ? 0.15 : setN >= 4 ? 0.06 : 0;
+  const rm = g.isEnemy ? { hp: 0, crit: 0 } : RELIC_MOD;
+  const hp = (100 + s.vit * 14 + g.level * 9) * (1 + affixSum(g, 'hpPct') + rk('will') * 0.07 + rm.hp + setB);
+  const dmgMul = 1 + affixSum(g, 'dmgPct') + rk('iron') * 0.06 + setB;
   const cs = {
     level: g.level, stats: s,
     hp, armor,
     dmgMin: (wmin + s.str * 0.85) * dmgMul, dmgMax: (wmax + s.str * 0.85) * dmgMul,
     interval: Math.max(0.3, wb.interval / (1 + s.agi * 0.006)),
     reach: wb.reach, style: wb.style, wind: wb.wind, weapon: wi ? wi.base : null, dual: !!wb.dual,
-    crit: Math.min(0.65, 0.04 + s.tec * 0.0025 + affixSum(g, 'crit') + rk('eye') * 0.04 + (wb.crit || 0)),
+    crit: Math.min(0.65, 0.04 + s.tec * 0.0025 + affixSum(g, 'crit') + rk('eye') * 0.04 + (wb.crit || 0) + rm.crit),
     critMult: 1.6 + rk('eye') * 0.08 + s.tec * 0.002,
     dodge: Math.min(0.4, 0.02 + s.agi * 0.0018 + affixSum(g, 'dodge') + rk('fleet') * 0.02 + (off?.dodge || 0)),
     block: off ? Math.min(0.55, (off.block * (1 + s.tec * 0.004)) + rk('parry') * 0.04) : 0,
@@ -243,7 +254,7 @@ export function rollSkill(g, shrineLv = 0) {
 
 export function grantXp(g, amount, game) {
   const events = [];
-  g.xp += amount;
+  g.xp += amount * (1 + (game?.state.relics?.xp || 0) * 0.08);
   while (g.xp >= xpNeed(g.level)) {
     g.xp -= xpNeed(g.level);
     g.level++;
@@ -262,6 +273,7 @@ export function grantXp(g, amount, game) {
         const cur = g.skills.find(s => s.id === id);
         if (cur) { cur.rank++; ev.skill = { id, rank: cur.rank, isNew: false }; }
         else { g.skills.push({ id, rank: 1 }); ev.skill = { id, rank: 1, isNew: true }; }
+        if (game) game.state.stats.skills = (game.state.stats.skills || 0) + 1;
       }
     }
     events.push(ev);
@@ -295,6 +307,8 @@ export class Game {
       settings: { quality: 1, sound: true, music: true, auto: false, speed: 1, shake: true },
       lastTick: Date.now(), playtime: 0, lastSquad: null, lastSetup: null,
       tutorial: { intro: false },
+      laurels: 0, quests: [], questsDone: 0, eventT: 240,
+      relics: { gold: 0, xp: 0, train: 0, vigor: 0, crit: 0, market: 0 },
     };
     return s;
   }
@@ -304,7 +318,7 @@ export class Game {
     try { s = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { s = null; }
     if (s && s.v === 1) {
       const def = this.newState();
-      this.state = { ...def, ...s, b: { ...def.b, ...s.b }, stats: { ...def.stats, ...s.stats }, settings: { ...def.settings, ...s.settings }, tutorial: { ...def.tutorial, ...s.tutorial } };
+      this.state = { ...def, ...s, b: { ...def.b, ...s.b }, stats: { ...def.stats, ...s.stats }, relics: { ...def.relics, ...(s.relics || {}) }, settings: { ...def.settings, ...s.settings }, tutorial: { ...def.tutorial, ...s.tutorial } };
       for (const g of this.state.gladiators) { g.grow ||= { str: 0, agi: 0, vit: 0, tec: 0, wil: 0 }; g.prog ||= { str: 0, agi: 0, vit: 0, tec: 0, wil: 0 }; }
       const away = (Date.now() - (s.lastTick || Date.now())) / 1000;
       this.offline = null;
@@ -314,6 +328,7 @@ export class Game {
       this.refreshMarket(true);
     }
     if (!this.state.market.length) this.refreshMarket(true);
+    this.ensureQuests();
     this.recalc();
     return this.state;
   }
@@ -340,14 +355,15 @@ export class Game {
 
   recalc() {
     const st = this.state;
-    const passive = (0.6 + Math.pow(st.fame, 0.72) * 0.08) * (1 + st.b.stands * 0.18) * this.legacy;
+    const passive = (0.6 + Math.pow(st.fame, 0.72) * 0.08) * (1 + st.b.stands * 0.18) * this.legacy * (1 + st.relics.gold * 0.08);
     this.incomeRate = passive;
+    RELIC_MOD.hp = st.relics.vigor * 0.03; RELIC_MOD.crit = st.relics.crit * 0.01;
   }
 
   fatigueEff(g) { return g.fatigue < 70 ? 1 : 1 - (g.fatigue - 70) / 30 * 0.75; }
   trainRate(g) {
     const st = this.state;
-    return (1 + st.b.yard * 0.12) * (1 + st.rudis * 0.05) * this.fatigueEff(g);
+    return (1 + st.b.yard * 0.12) * (1 + st.rudis * 0.05) * (1 + st.relics.train * 0.08) * this.fatigueEff(g);
   }
   trainNeed(g, stat) { return 6 + Math.pow(g.stats[stat], 1.12) * 0.9; }
   isReady(g) { return g.wounded <= 0; }
@@ -373,6 +389,7 @@ export class Game {
       }
     }
     st.marketT -= dt;
+    st.eventT -= dt;
     this.recalc();
   }
 
@@ -401,7 +418,7 @@ export class Game {
   refreshMarket(free = false, cost = 0) {
     const st = this.state;
     if (!free && !this.spend(cost)) return false;
-    const mk = st.b.market;
+    const mk = st.b.market + st.relics.market * 2;
     const vl = VENUES[Math.min(st.stats.bestVenue, VENUES.length - 1)].lv[0];
     st.market = [];
     for (let i = 0; i < 5; i++) {
@@ -487,6 +504,40 @@ export class Game {
     if (!this.spend(cost)) return false;
     g.wounded = 0;
     return true;
+  }
+
+  // ── misiones y reliquias ─────────────────────────────────────────────────
+  questTarget(t) {
+    const k = 1 + this.state.questsDone * 0.22;
+    if (t.id === 'gold') return Math.round(Math.max(300, this.incomeRate * 420) * k / 10) * 10;
+    return Math.max(1, Math.round(t.base * k));
+  }
+  ensureQuests() {
+    const st = this.state;
+    st.quests = st.quests || [];
+    while (st.quests.length < 3) {
+      const used = new Set(st.quests.map(q => q.type));
+      const pool = QUEST_TYPES.filter(t => !used.has(t.id) && (t.id !== 'bosses' || st.stats.bestVenue >= 2));
+      const t = pick(pool.length ? pool : QUEST_TYPES.filter(x => x.id !== 'bosses'));
+      st.quests.push({ id: uid(), type: t.id, target: this.questTarget(t), base0: st.stats[t.stat] || 0 });
+    }
+  }
+  questProgress(q) { const t = QUEST_TYPES.find(x => x.id === q.type); return Math.min(q.target, (this.state.stats[t.stat] || 0) - q.base0); }
+  questReward(q) { const n = this.state.questsDone; return { gold: Math.round((120 + this.incomeRate * 150) * (1 + n * 0.25)), laurels: 1 + Math.floor(n / 6) }; }
+  claimQuest(id) {
+    const st = this.state, q = st.quests.find(x => x.id === id);
+    if (!q || this.questProgress(q) < q.target) return null;
+    const r = this.questReward(q);
+    st.gold += r.gold; st.laurels += r.laurels; st.questsDone++;
+    st.quests = st.quests.filter(x => x.id !== id);
+    this.ensureQuests();
+    return r;
+  }
+  relicCost(id) { return 2 + this.state.relics[id] * 2; }
+  buyRelic(id) {
+    const st = this.state, R = RELICS[id];
+    if (st.relics[id] >= R.max || st.laurels < this.relicCost(id)) return false;
+    st.laurels -= this.relicCost(id); st.relics[id]++; this.recalc(); return true;
   }
 
   // ── retiro / legado ──────────────────────────────────────────────────────
@@ -587,7 +638,7 @@ export function rollLoot(game, venueIdx, modeId, avgLv, won, boss) {
   const mode = MODES[modeId];
   const items = [];
   if (!won) return items;
-  const q = st.b.forge * 2 + st.b.shrine * 1.5 + venueIdx * 3 + (boss ? 25 : 0);
+  const q = st.b.forge * 2 + st.b.shrine * 1.5 + venueIdx * 3 + (boss ? 25 : 0) + st.relics.market * 2;
   let n = Math.random() < 0.5 + venueIdx * 0.04 ? 1 : 0;
   if (modeId === 'melee' || modeId === 'tournament') n += 1;
   if (boss) n += 1;

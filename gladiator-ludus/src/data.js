@@ -211,3 +211,23 @@ export const NICKS = ['el Toro', 'Sombra', 'Martillo', 'el Lobo', 'Garra', 'Ceni
 export const SKIN_TONES = ['#f0c8a0', '#e3b088', '#d09a6c', '#b87a50', '#94603c', '#6e4428', '#4f3020'];
 export const HAIR_COLORS = ['#1a1412', '#2c1c12', '#4a2e1a', '#7a5230', '#b48850', '#c9a060', '#8a8a8a', '#5a1c14'];
 export const TUNIC_COLORS = ['#8a1f25', '#1f4a8a', '#2f6a3a', '#7a5a1a', '#4a2a6a', '#b0a08a', '#2a2a30', '#9a4a1a'];
+
+// ── Misiones, reliquias y eventos ───────────────────────────────────────────
+export const QUEST_TYPES = [
+  { id: 'wins', icon: '🏆', stat: 'wins', base: 3, name: n => `Gana ${n} combates` },
+  { id: 'fights', icon: '⚔️', stat: 'fights', base: 5, name: n => `Disputa ${n} combates` },
+  { id: 'kills', icon: '💀', stat: 'kills', base: 4, name: n => `Derrota a ${n} rivales` },
+  { id: 'trained', icon: '💪', stat: 'trained', base: 14, name: n => `Entrena ${n} puntos de atributo` },
+  { id: 'gold', icon: '🪙', stat: 'gold', base: 0, name: n => `Acumula ${n} denarios` },
+  { id: 'skills', icon: '✨', stat: 'skills', base: 1, name: n => `Aprende o mejora ${n} habilidades` },
+  { id: 'bosses', icon: '🐂', stat: 'bosses', base: 1, name: n => `Vence a ${n} monstruo${n > 1 ? 's' : ''} del Bestiarium` },
+];
+
+export const RELICS = {
+  gold: { name: 'Cuerno de la Abundancia', icon: '🏺', max: 20, desc: l => `+${l * 8}% de denarios (pasivos y de combate)` },
+  xp: { name: 'Laurel de Minerva', icon: '🌿', max: 20, desc: l => `+${l * 8}% de experiencia` },
+  train: { name: 'Yunque de Vulcano', icon: '⚒️', max: 20, desc: l => `+${l * 8}% de velocidad de entrenamiento` },
+  vigor: { name: 'Égida de Hércules', icon: '🛡️', max: 15, desc: l => `+${l * 3}% de vida de tu equipo` },
+  crit: { name: 'Ojo de Marte', icon: '🎯', max: 15, desc: l => `+${l}% de probabilidad de crítico` },
+  market: { name: 'Bolsa de Mercurio', icon: '💰', max: 15, desc: l => `+${l * 2} de calidad de reclutas y botín` },
+};

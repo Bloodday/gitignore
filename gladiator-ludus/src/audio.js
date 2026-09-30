@@ -160,16 +160,34 @@ export class GameAudio {
   // ── percusión de guerra (taiko) ──────────────────────────────────────────
   update(dt) {
     if (!this.ctx || !this.enabled || !this.musicOn) return;
-    if (this.mode !== 'arena') return;
     const t = this.ctx.currentTime;
+    if (this.mode !== 'arena') {
+      // melodía tranquila: arpegio de lira en escala frigia
+      if (this.nextNote === undefined || this.nextNote < t - 1) this.nextNote = t + 0.5;
+      while (this.nextNote < t + 0.15) {
+        const sc = [220, 233.1, 277.2, 329.6, 349.2, 440, 466.2, 554.4];
+        this.noteIdx = ((this.noteIdx ?? 0) + (Math.random() < 0.6 ? 1 : -1) + (Math.random() < 0.15 ? 3 : 0) + sc.length * 4) % sc.length;
+        if (Math.random() < 0.7) this.pluck(sc[this.noteIdx], this.nextNote - t);
+        this.nextNote += 0.9 + Math.random() * 0.9;
+      }
+      return;
+    }
     const bpm = 78 + this.hype * 34, step = 60 / bpm / 2;
     if (this.nextBeat < t - 0.2) this.nextBeat = t + 0.05;
     while (this.nextBeat < t + 0.12) {
       const b = this.beat % 16;
+      if (this.hype > 0.5 && b % 4 === 2) this.pluck([196, 233.1, 261.6, 293.7][(this.beat >> 2) % 4] * 0.5, this.nextBeat - t);
       const loud = b % 8 === 0 ? 1 : b % 4 === 0 ? 0.65 : (b % 2 === 0 && this.hype > 0.25) ? 0.35 : (this.hype > 0.6 && b % 2 === 1 ? 0.22 : 0);
       if (loud > 0) this.drum(loud, this.nextBeat - t);
       this.nextBeat += step; this.beat++;
     }
+  }
+  pluck(f, when = 0) {
+    const ctx = this.ctx, t = ctx.currentTime + Math.max(0, when);
+    const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
+    const o2 = ctx.createOscillator(); o2.type = 'sine'; o2.frequency.value = f * 2.01;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.06, t + 0.008); g.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
+    o.connect(g); o2.connect(g); g.connect(this.mus); g.connect(this.verb); o.start(t); o2.start(t); o.stop(t + 1.9); o2.stop(t + 1.9);
   }
   drum(v, when) {
     if (!this.ctx) return;

@@ -4,7 +4,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three/webgpu';
 import { attribute, vec2 } from 'three/tsl';
-import { softCircle, smokePuff, ringTex, streakTex } from './textures.js';
+import { softCircle, smokePuff, ringTex, streakTex, flameTex } from './textures.js';
 
 const V = THREE.Vector3;
 const tmpO = new THREE.Object3D();
@@ -135,6 +135,7 @@ export class FX {
     this.scene = scene; this.camera = camera;
     this.add = new Pool(scene, 1800, true, softCircle(64));
     this.smoke = new Pool(scene, 900, false, smokePuff(96));
+    this.flames = new Pool(scene, 260, true, flameTex(128));
     this.rings = [];
     this.ringTexture = ringTex(256);
     this.ringMat = (c) => { const m = new THREE.MeshBasicNodeMaterial({ map: this.ringTexture, color: c, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }); m.fog = false; return m; };
@@ -151,7 +152,7 @@ export class FX {
       this.columns.push({ mesh: m, t: 0, dur: 1, on: false, r: 1, h: 5, col: new THREE.Color() });
     }
     this.bolts = [];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 10; i++) {
       const g = new THREE.BufferGeometry();
       const n = 14;
       g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 2 * 3), 3));
@@ -213,6 +214,11 @@ export class FX {
       this.spark(new V(pos.x + Math.cos(a) * r, pos.y + Math.random() * 0.3, pos.z + Math.sin(a) * r), new V(0, up * (0.5 + Math.random()), 0), { life: 0.8 + Math.random() * 0.8, s0: 0.14, s1: 0.0, color, grav: -0.5, drag: 0.5 });
     }
   }
+  flame(pos, vel, o = {}) { return this.flames.spawn({ pos, vel, life: o.life ?? 0.7, s0: o.s0 ?? 0.5, s1: o.s1 ?? 0.15, color: o.color ?? '#ffb060', alpha: o.alpha ?? 0.9, grav: o.grav ?? -2, drag: o.drag ?? 1.2, fade: 'pop' }); }
+  fireBurst(pos, n = 18, r = 1.5, color = '#ff9a40') {
+    for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, d = Math.random() * r; this.flame(new V(pos.x + Math.cos(a) * d, 0.1, pos.z + Math.sin(a) * d), new V(Math.cos(a) * 0.8, 1.5 + Math.random() * 2.5, Math.sin(a) * 0.8), { s0: 0.7 + Math.random() * 0.6, life: 0.6 + Math.random() * 0.6, color }); }
+  }
+  aura(pos, h, color = '#ff4030') { this.flame(new V(pos.x + (Math.random() - 0.5) * 0.7, 0.1 + Math.random() * 0.4, pos.z + (Math.random() - 0.5) * 0.7), new V(0, 1.8 + Math.random(), 0), { s0: 0.5, s1: 0.1, life: 0.6, color, alpha: 0.7 }); }
   confetti(pos, n = 40) {
     const cols = ['#ffd24a', '#e04040', '#ffffff', '#4ab0ff'];
     for (let i = 0; i < n; i++) this.spark(pos, new V((Math.random() - 0.5) * 10, 6 + Math.random() * 6, (Math.random() - 0.5) * 10), { life: 1.6 + Math.random(), s0: 0.14, s1: 0.1, color: cols[i % 4], grav: 7, drag: 0.8 });
@@ -232,6 +238,8 @@ export class FX {
     const b = this.bolts.find(x => !x.on) || this.bolts[0];
     b.on = true; b.t = 0; b.dur = 0.45; b.bottom.set(target.x, 0, target.z); b.top.set(target.x + (Math.random() - 0.5) * 3, height, target.z + (Math.random() - 0.5) * 3);
     b.mesh.visible = true; this.rebuildBolt(b);
+    for (let i = 0; i < 2; i++) { const br = this.bolts.find(x => !x.on); if (!br) break; br.on = true; br.t = 0; br.dur = 0.3; br.bottom.set(target.x, 0.2, target.z); br.top.set(target.x + (Math.random() - 0.5) * 7, 3 + Math.random() * 5, target.z + (Math.random() - 0.5) * 7); br.mesh.visible = true; this.rebuildBolt(br); }
+    this.fireBurst(new V(target.x, 0, target.z), 10, 1.2, '#9ac8ff');
     this.flash(new V(target.x, 6, target.z), 45, 0.3, '#b8d8ff');
     for (let i = 0; i < 30; i++) this.spark(new V(target.x, 0.2, target.z), new V((Math.random() - 0.5) * 12, Math.random() * 8, (Math.random() - 0.5) * 12), { life: 0.4 + Math.random() * 0.4, s0: 0.14, s1: 0, color: '#b8d8ff', grav: 14 });
     this.ring(target, 3.4, '#b8d8ff', 0.5, 0.4);
@@ -291,6 +299,7 @@ export class FX {
   update(dt, w, h, realDt = dt) {
     this.add.update(dt, this.camera);
     this.smoke.update(dt, this.camera);
+    this.flames.update(dt, this.camera);
     for (const r of this.rings) if (r.on) {
       r.t += dt; const k = r.t / r.dur;
       if (k >= 1) { r.on = false; r.mesh.visible = false; continue; }

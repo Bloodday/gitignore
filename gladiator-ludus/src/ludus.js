@@ -338,7 +338,7 @@ export class LudusCrowd {
     anim.mode = 'display';
     avatar.root.traverse(o => { if (o.isMesh) o.castShadow = true; });
     this.eng.scene.add(avatar.root);
-    const spawn = this.worldPos(new V((Math.random() - 0.5) * 6, 0, 14));
+    const spawn = this.worldPos(new V((Math.random() - 0.5) * 8, 0, 4));
     avatar.root.position.copy(spawn);
     const el = document.createElement('div');
     el.className = 'gtag';

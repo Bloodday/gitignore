@@ -241,11 +241,12 @@ class App {
     if (!won && roundsWon === 0) { gold = rw.gold; fame = rw.fame; xp = rw.xp; }
     const cs = squad.map(g => combatStats(g));
     const goldBonus = cs.reduce((a, c) => a + c.goldPct, 0);
-    gold *= (1 + goldBonus) * game.legacy;
+    gold *= (1 + goldBonus) * game.legacy * (1 + st.relics.gold * 0.08);
     fame *= 1 + st.b.stands * 0.05;
     xp *= 1 + st.rudis * 0.06;
     const hypeBonus = res.hype * 0.5;
     st.gold += gold; st.stats.gold += gold; st.fame += fame;
+    if (won && cfg.boss) st.stats.bosses = (st.stats.bosses || 0) + 1;
     st.stats.fights++; if (won) { st.stats.wins++; st.stats.bestVenue = Math.max(st.stats.bestVenue, cfg.venueIdx); if (venue.endless) st.stats.eternal = (st.stats.eternal || 0) + 1; }
     const levelEvents = [];
     const wounded = [];
@@ -290,6 +291,7 @@ class App {
       document.getElementById('ui').classList.remove('hidden');
       this.ui.showResult(sum);
       this.audio.setMode('arena');
+      if (!this.st.tutorial.afterFight) { this.st.tutorial.afterFight = true; setTimeout(() => this.ui.hint('Los heridos necesitan reposo. Revisa Misiones y Reliquias en Legado, y gasta el botín en la Armería.', 8000), 1500); }
     }
     this.ui.renderRoster();
   }
@@ -363,6 +365,7 @@ class App {
     this.uiT += dt; this.lastSave += dt;
     if (this.uiT > 0.25) { this.uiT = 0; this.ui.tick(); this.syncIfChanged(); }
     if (this.lastSave > 15) { this.lastSave = 0; this.game.save(); }
+    if (this.mode === 'ludus' && this.st.eventT <= 0 && !this.ui.modalOpen && this.st.gladiators.length) { this.st.eventT = 240 + Math.random() * 200; this.ui.showEvent(); }
 
     if (this.flight) this.updateFlight(dt);
     else if (this.mode === 'ludus') {

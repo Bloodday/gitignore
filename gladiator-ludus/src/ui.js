@@ -5,10 +5,12 @@ import {
   STATS, STAT_INFO, CLASSES, SLOTS, SLOT_ORDER, BASES, RARITY, SKILLS, SKILL_RARITY, BUILDINGS, VENUES, MODES, MAX_SKILL_RANK,
 } from './data.js';
 import {
-  fmt, fmtTime, xpNeed, skillSlots, combatStats, totalStats, powerOf, itemArmor, weaponDmg, itemValue, forgeCost, MAX_PLUS,
+  fmt, fmtTime, xpNeed, skillSlots, combatStats, totalStats, setCount, powerOf, itemArmor, weaponDmg, itemValue, forgeCost, MAX_PLUS,
   genEnemy, buildFoes, rewardFor, venueUnlocked, recruitCost, clamp,
 } from './game.js';
 import { estimateWin } from './combat.js';
+import { QUEST_TYPES, RELICS } from './data.js';
+import { pickEvent } from './events.js';
 
 const ICONS = {
   weapon: { gladius: '🗡️', sica: '🔪', sicae: '⚔️', hasta: '🦯', tridens: '🔱', bipennis: '🪓', malleus: '🔨' },
@@ -265,6 +267,7 @@ export class UI {
       } else h += `<div class="slot emptys ${blocked ? 'locked' : ''}" ${blocked ? 'style="opacity:.4"' : ''} data-act="slot" data-id="${g.id}" data-slot="${s}"><span class="si" style="opacity:.35">${SLOTS[s].icon}</span><span class="sl">${blocked ? 'Arma a dos manos' : SLOTS[s].name}</span></div>`;
     }
     h += `</div>`;
+    { const n = setCount(g); h += `<div class="tiny ${n >= 4 ? 'gold' : 'dim'}" style="margin-top:6px">⚜️ Equipo de ${c.name}: ${n}/${Object.values(c.kit).filter(Boolean).length} piezas clásicas · 4 piezas: +6% daño y vida · 6 piezas: +15%</div>`; }
     // combate
     const avg = Math.round((cs.dmgMin + cs.dmgMax) / 2);
     h += `<div class="sec">Estadísticas de combate · Poder ${Math.round(powerOf(g))}</div><div class="grid2 small">
@@ -475,6 +478,18 @@ export class UI {
     let h = `<div class="card"><div class="row"><div class="ava" style="width:56px;height:56px;font-size:30px">🗡️</div><div class="grow"><div class="name" style="font-size:17px">${st.rudis} Rudis</div>
       <div class="small dim">Bonos permanentes: <b class="gold">+${st.rudis * 6}%</b> de ingresos y entrenamiento, <b class="gold">+${st.rudis * 6}%</b> de experiencia.</div></div></div>
       <div class="dim small" style="margin-top:8px;font-family:var(--ff-b);font-style:italic">Manumite a tus gladiadores veteranos (nivel 10+) desde su ficha: recibirán la libertad y la rudis de madera, y tú recibirás bonos eternos.</div></div>`;
+    h += `<div class="sec">Misiones · ${st.laurels} 🏅 laureles</div>`;
+    for (const q of st.quests) {
+      const t = QUEST_TYPES.find(x => x.id === q.type), pr = this.game.questProgress(q), done = pr >= q.target, rw = this.game.questReward(q);
+      h += `<div class="card"><div class="row"><div class="ava" style="width:40px;height:40px;font-size:20px">${t.icon}</div><div class="grow"><div class="small" style="font-weight:600">${t.name(fmt(q.target))}</div><div class="bar thin" style="margin:5px 0 3px"><i style="width:${(pr / q.target * 100).toFixed(0)}%"></i></div><div class="tiny dim">${fmt(pr)} / ${fmt(q.target)} · Premio: 🪙 ${fmt(rw.gold)} + ${rw.laurels} 🏅</div></div>
+        <button class="btn sm green ${done ? '' : 'disabled'}" data-act="claimQuest" data-id="${q.id}">${done ? 'Reclamar' : '…'}</button></div></div>`;
+    }
+    h += `<div class="sec">Reliquias del Ludus</div><div class="dim tiny" style="margin-bottom:4px">Mejoras permanentes que se compran con laureles 🏅 (se ganan con misiones y hallazgos).</div>`;
+    for (const [id, R] of Object.entries(RELICS)) {
+      const lv = st.relics[id], max = lv >= R.max, cost = this.game.relicCost(id);
+      h += `<div class="card" style="padding:8px 10px"><div class="row"><div class="ava" style="width:38px;height:38px;font-size:19px">${R.icon}</div><div class="grow"><div class="small" style="font-weight:600">${R.name} <span class="badge-lv" style="min-width:auto;padding:0 7px;height:18px;font-size:10px;border-radius:9px">${lv}</span></div><div class="tiny dim">${R.desc(Math.max(1, lv))}</div></div>
+        ${max ? '<span class="tag gold">Máx.</span>' : `<button class="btn sm ${st.laurels >= cost ? '' : 'disabled'}" data-act="relic" data-id="${id}">${cost} 🏅</button>`}</div></div>`;
+    }
     const vets = st.gladiators.filter(g => this.game.canRetire(g));
     if (vets.length) { h += `<div class="sec">Listos para la libertad</div>`; for (const g of vets) h += `<div class="card click" data-act="select" data-goto="ludus" data-id="${g.id}"><div class="row between"><span class="name" style="font-size:14px">${g.name} <span class="dim small">nv ${g.level}</span></span><span class="gold">+${this.game.retireValue(g)} 🗡️</span></div></div>`; }
     h += `<div class="sec">Salón de la Fama</div>`;
@@ -566,6 +581,8 @@ export class UI {
         this.hooks.startFight({ venueIdx: A.venue, modeId: A.mode, squad, foes: A.foes, boss: A.boss });
         break;
       }
+      case 'claimQuest': { const r = g.claimQuest(id); if (r) { au.levelUp(); this.toast('🏅', `Misión cumplida: +${fmt(r.gold)} 🪙 y +${r.laurels} 🏅`, 'gold'); } else au.deny(); this.render(); break; }
+      case 'relic': if (g.buyRelic(id)) { au.buy(); this.toast(RELICS[id].icon, `${RELICS[id].name} mejorada.`, 'gold'); } else au.deny(); this.render(); break;
       case 'save': g.save(); this.toast('💾', 'Partida guardada.', 'good'); au.click(); break;
       case 'export': { const txt = g.exportSave(); this.showModal(`<div class="modal"><h1 style="font-size:20px">Exportar partida</h1><div class="sub">Copia este texto para respaldar tu progreso</div><textarea readonly style="width:100%;height:160px;background:#140d08;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px;font-size:11px">${txt}</textarea><div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn ghost" data-m="close">Cerrar</button></div></div>`, true); break; }
       case 'import': this.showModal(`<div class="modal"><h1 style="font-size:20px">Importar partida</h1><div class="sub">Pega aquí tu código de guardado</div><textarea id="imp-txt" style="width:100%;height:140px;background:#140d08;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px;font-size:11px"></textarea><div class="row" style="justify-content:flex-end;gap:8px;margin-top:10px"><button class="btn ghost" data-m="close">Cancelar</button><button class="btn" data-m="doImport">Importar</button></div></div>`, true); break;
@@ -592,6 +609,13 @@ export class UI {
       case 'unequip': { const gl = this.gl(id); g.unequip(gl, t.dataset.slot); au.equip(); this.hooks.rebuildAvatar?.(gl.id); this.closeModal(); this.render(); break; }
       case 'forge': { const it = this.findItem(id); if (it && g.upgradeItem(it)) { au.buy(); this.hooks.rebuildAll?.(); this.openItemModal(id); this.render(); } else au.deny(); break; }
       case 'sell': { const v = g.sell(id); if (v) { au.coin(); this.toast('🪙', `Vendido por ${fmt(v)}.`, 'gold'); } this.closeModal(); this.render(); break; }
+      case 'event': {
+        const c = this._ev?.choices[+t.dataset.i]; if (!c) break;
+        if (c.cost && !g.spend(c.cost)) { au.deny(); this.toast('⚠️', 'No tienes suficientes denarios.', 'bad'); break; }
+        const r = c.run(); this.closeModal(); au.buy();
+        this.toast(this._ev.ev.icon, r.msg, 'gold'); if (r.recruited) this.hooks.onRosterChange?.();
+        this._rosterKey = null; this.render(); break;
+      }
       case 'yes': { const fn = this._confirm; this.closeModal(); fn && fn(); break; }
       case 'settingsOk': {
         const s = this.st.settings;
@@ -629,6 +653,14 @@ export class UI {
   }
   hint(text, ms = 5000) {
     const h = $('#hint'); h.textContent = text; h.classList.add('on'); clearTimeout(this._hintT); this._hintT = setTimeout(() => h.classList.remove('on'), ms);
+  }
+
+  showEvent() {
+    const ev = pickEvent(); const g = this.game;
+    this._ev = { ev, choices: ev.choices(g) };
+    const btns = this._ev.choices.map((c, i) => `<button class="btn ${c.cost ? '' : 'ghost'}" data-m="event" data-i="${i}" ${c.cost ? `data-cost="${c.cost}"` : ''}>${c.label}${c.cost ? ` <span class="cost">🪙 ${fmt(c.cost)}</span>` : ''}</button>`).join('');
+    this.showModal(`<div class="modal" style="text-align:center"><div style="font-size:48px">${ev.icon}</div><h1 style="font-size:22px">${ev.title}</h1><div class="sub" style="font-style:normal">${ev.text(g)}</div><div class="row" style="justify-content:center;gap:10px;flex-wrap:wrap">${btns}</div></div>`, false, true);
+    this.audio().horn?.();
   }
 
   // ── eventos de progreso ──────────────────────────────────────────────────
@@ -670,7 +702,7 @@ export class UI {
   live() {
     const st = this.st, g = this.game;
     const set = (sel, txt) => { const e = $(sel); if (e && e.textContent !== txt) e.textContent = txt; };
-    set('#r-gold', fmt(st.gold)); set('#r-income', '+' + fmt(g.incomeRate) + '/s'); set('#r-fame', fmt(st.fame)); set('#r-rudis', String(st.rudis));
+    set('#r-gold', fmt(st.gold)); set('#r-income', '+' + fmt(g.incomeRate) + '/s'); set('#r-fame', fmt(st.fame)); set('#r-rudis', String(st.rudis)); set('#r-laurel', String(st.laurels));
     // elementos enlazados
     this.body.querySelectorAll('[data-live]').forEach(e => this.bindLive(e, false));
     $('#roster').querySelectorAll('[data-live]').forEach(e => this.bindLive(e, false));
