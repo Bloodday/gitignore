@@ -106,7 +106,7 @@ export class Engine {
   }
 
   setupLights() {
-    const sun = new THREE.DirectionalLight(0xffc088, 4.2);
+    const sun = new THREE.DirectionalLight(0xffc088, 3.4);
     sun.castShadow = true;
     const Q = QUALITY[this.quality];
     sun.shadow.mapSize.set(Q.shadow, Q.shadow);
@@ -140,13 +140,13 @@ export class Engine {
       desat: uniform(0),
       red: uniform(0),
       exposure: uniform(1),
-      bloomStrength: uniform(0.42),
+      bloomStrength: uniform(0.3),
       blur: uniform(0),
     };
     const u = this.u;
     const scenePass = pass(this.scene, this.camera);
     const col = scenePass.getTextureNode('output');
-    const bl = bloom(col, 0.3, 0.5, 1.0);
+    const bl = bloom(col, 0.3, 0.45, 3.2);
     this.bloomNode = bl;
     bl.strength = u.bloomStrength;
     let out = col.add(bl);

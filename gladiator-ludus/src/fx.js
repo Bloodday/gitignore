@@ -3,7 +3,7 @@
 //  anillos de choque, rayos, columnas de luz y números flotantes.
 // ────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three/webgpu';
-import { attribute } from 'three/tsl';
+import { attribute, vec2 } from 'three/tsl';
 import { softCircle, smokePuff, ringTex, streakTex } from './textures.js';
 
 const V = THREE.Vector3;
@@ -20,12 +20,15 @@ class Pool {
       mat.opacityNode = attribute('aAlpha', 'float');
     }
     const geo = new THREE.PlaneGeometry(1, 1);
+    this.size = new THREE.InstancedBufferAttribute(new Float32Array(max), 1);
+    geo.setAttribute('aSize', this.size);
+    mat.scaleNode = vec2(attribute('aSize', 'float'));
     if (!additive) geo.setAttribute('aAlpha', this.alpha);
     this.mesh = new THREE.InstancedMesh(geo, mat, max);
     this.mesh.frustumCulled = false;
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.mesh.count = max;
-    for (let i = 0; i < max; i++) { tmpO.position.set(0, -999, 0); tmpO.scale.setScalar(0.0001); tmpO.updateMatrix(); this.mesh.setMatrixAt(i, tmpO.matrix); this.mesh.setColorAt(i, tmpC.set('#fff')); }
+    for (let i = 0; i < max; i++) { tmpO.position.set(0, -999, 0); tmpO.scale.setScalar(1); tmpO.updateMatrix(); this.mesh.setMatrixAt(i, tmpO.matrix); this.mesh.setColorAt(i, tmpC.set('#fff')); }
     this.mesh.renderOrder = additive ? 6 : 5;
     scene.add(this.mesh);
     this.p = [];
@@ -54,7 +57,7 @@ class Pool {
       if (!p.alive) continue;
       p.life += dt;
       if (p.life >= p.max) {
-        p.alive = false; tmpO.position.set(0, -999, 0); tmpO.scale.setScalar(0.0001); tmpO.updateMatrix(); m.setMatrixAt(i, tmpO.matrix);
+        p.alive = false; tmpO.position.set(0, -999, 0); tmpO.scale.setScalar(1); tmpO.updateMatrix(); m.setMatrixAt(i, tmpO.matrix); this.size.setX(i, 0);
         if (!this.additive) this.alpha.setX(i, 0);
         continue;
       }
@@ -65,11 +68,12 @@ class Pool {
       if (p.pos.y < 0.03 && p.grav > 0) { p.pos.y = 0.03; p.vel.y *= -0.3; p.vel.x *= 0.6; p.vel.z *= 0.6; }
       const s = p.s0 + (p.s1 - p.s0) * t;
       const fade = p.fade === 'out' ? (1 - t) * Math.min(1, t * 12) : p.fade === 'pop' ? Math.sin(t * Math.PI) : (1 - t * t);
-      tmpO.position.copy(p.pos); tmpO.scale.set(s, s, s); tmpO.updateMatrix();
+      tmpO.position.copy(p.pos); tmpO.scale.setScalar(1); tmpO.updateMatrix(); this.size.setX(i, s);
       m.setMatrixAt(i, tmpO.matrix);
       if (this.additive) { tmpC.copy(p.col).multiplyScalar(fade * p.a0); m.setColorAt(i, tmpC); }
       else { this.alpha.setX(i, fade * p.a0); m.setColorAt(i, p.col); }
     }
+    this.size.needsUpdate = true;
     m.instanceMatrix.needsUpdate = true;
     if (m.instanceColor) m.instanceColor.needsUpdate = true;
     if (!this.additive) this.alpha.needsUpdate = true;
@@ -178,7 +182,7 @@ export class FX {
       this.spark(pos, v, { life: 0.3 + Math.random() * 0.4, s0: 0.12 + Math.random() * 0.06, s1: 0.0, color, grav: 10 });
     }
     this.glow(pos, { s0: big ? 0.5 : 0.3, s1: big ? 1.3 : 0.8, life: 0.14, color: '#ffe2b0', alpha: 0.45 });
-    this.flash(pos, big ? 26 : 12, 0.12, '#ffd9a0');
+    this.flash(pos, big ? 7 : 3, 0.1, '#ffd9a0');
   }
   clang(pos, dir) {
     for (let i = 0; i < 18; i++) {
@@ -186,7 +190,7 @@ export class FX {
       this.spark(pos, v, { life: 0.25 + Math.random() * 0.3, s0: 0.1, s1: 0, color: '#cfe8ff', grav: 8 });
     }
     this.glow(pos, { s0: 0.4, s1: 1.1, life: 0.12, color: '#d8ecff', alpha: 0.4 });
-    this.flash(pos, 14, 0.1, '#d8ecff');
+    this.flash(pos, 4, 0.08, '#d8ecff');
   }
   dust(pos, n = 10, spread = 1, size = 0.9, color = '#d6b88a') {
     for (let i = 0; i < n; i++) {
@@ -228,7 +232,7 @@ export class FX {
     const b = this.bolts.find(x => !x.on) || this.bolts[0];
     b.on = true; b.t = 0; b.dur = 0.45; b.bottom.set(target.x, 0, target.z); b.top.set(target.x + (Math.random() - 0.5) * 3, height, target.z + (Math.random() - 0.5) * 3);
     b.mesh.visible = true; this.rebuildBolt(b);
-    this.flash(new V(target.x, 3, target.z), 140, 0.3, '#b8d8ff');
+    this.flash(new V(target.x, 6, target.z), 45, 0.3, '#b8d8ff');
     for (let i = 0; i < 30; i++) this.spark(new V(target.x, 0.2, target.z), new V((Math.random() - 0.5) * 12, Math.random() * 8, (Math.random() - 0.5) * 12), { life: 0.4 + Math.random() * 0.4, s0: 0.14, s1: 0, color: '#b8d8ff', grav: 14 });
     this.ring(target, 3.4, '#b8d8ff', 0.5, 0.4);
     this.dust(target, 8, 3, 1.4);
@@ -250,7 +254,7 @@ export class FX {
   }
   flash(pos, intensity = 20, dur = 0.12, color = '#ffd9a0') {
     if (intensity < this.lightI * (1 - this.lightT / Math.max(0.001, this.lightDur || 1))) return;
-    this.light.position.copy(pos); this.light.position.y = Math.max(pos.y, 1.2); this.light.color.set(color);
+    this.light.position.copy(pos); this.light.position.y = Math.max(pos.y, 2.5); this.light.color.set(color);
     this.lightI = intensity; this.lightT = 0; this.lightDur = dur;
   }
 
@@ -284,7 +288,7 @@ export class FX {
     }
   }
 
-  update(dt, w, h) {
+  update(dt, w, h, realDt = dt) {
     this.add.update(dt, this.camera);
     this.smoke.update(dt, this.camera);
     for (const r of this.rings) if (r.on) {
@@ -308,7 +312,7 @@ export class FX {
       b.mesh.material.color.set('#dcecff').multiplyScalar((1 - k) * (0.6 + Math.random() * 0.6) * 3);
     }
     if (this.lightI > 0) {
-      this.lightT += dt; const k = this.lightT / this.lightDur;
+      this.lightT += realDt; const k = this.lightT / this.lightDur;
       this.light.intensity = k >= 1 ? 0 : this.lightI * (1 - k) ** 2;
       if (k >= 1) this.lightI = 0;
     }

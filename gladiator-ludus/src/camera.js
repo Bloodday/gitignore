@@ -122,7 +122,7 @@ export class ArenaDirector {
   clampInside(p) {
     const r = Math.hypot(p.x, p.z);
     if (r > 16.2) { p.x *= 16.2 / r; p.z *= 16.2 / r; }
-    if (p.y < 0.9) p.y = 0.9;
+    if (p.y < 1.6) p.y = 1.6;
     return p;
   }
   update(dt, views, hype = 0) {
@@ -133,21 +133,21 @@ export class ArenaDirector {
     if (!this.shot || this.shot.t > this.shot.dur) this.newShot(views);
     const S = this.shot; S.t += dt;
     this.theta += dt * 0.07 * S.dir;
-    const pos = this.tmp; const look = new V(c.x, 1.2, c.z);
+    const pos = this.tmp; const look = new V(c.x, 1.5, c.z);
     let fov = 40, rate = 2.6;
     const th = this.theta + S.off;
     switch (S.kind) {
-      case 'wide': pos.set(c.x + Math.sin(th) * (9 + sp * 1.3), 4.6 + sp * 0.3, c.z + Math.cos(th) * (9 + sp * 1.3)); fov = 42; break;
-      case 'high': pos.set(c.x + Math.sin(th) * (8 + sp * 0.8), 10.5 + sp * 0.4, c.z + Math.cos(th) * (8 + sp * 0.8)); fov = 38; look.y = 0.5; break;
-      case 'low': pos.set(c.x + Math.sin(th) * (5.6 + sp * 1.0), 1.15, c.z + Math.cos(th) * (5.6 + sp * 1.0)); fov = 46; look.y = 1.5; break;
-      case 'crane': { const k = S.t / S.dur; pos.set(c.x + Math.sin(th + k) * (8 + sp), 2.0 + k * 7, c.z + Math.cos(th + k) * (8 + sp)); fov = 40; break; }
+      case 'wide': pos.set(c.x + Math.sin(th) * (11 + sp * 1.3), 5.4 + sp * 0.3, c.z + Math.cos(th) * (11 + sp * 1.3)); fov = 42; look.y = 1.4; break;
+      case 'high': pos.set(c.x + Math.sin(th) * (9 + sp * 0.8), 11.5 + sp * 0.4, c.z + Math.cos(th) * (9 + sp * 0.8)); fov = 38; look.y = 0.8; break;
+      case 'low': pos.set(c.x + Math.sin(th) * (8.5 + sp * 1.1), 1.7, c.z + Math.cos(th) * (8.5 + sp * 1.1)); fov = 44; look.y = 2.1; break;
+      case 'crane': { const k = S.t / S.dur; pos.set(c.x + Math.sin(th + k) * (10 + sp), 2.6 + k * 7, c.z + Math.cos(th + k) * (10 + sp)); fov = 40; look.y = 1.5; break; }
       case 'duel': {
         const a = S.pick?.f, bb = this.otherOf(S.pick, views);
         if (a && bb) {
           const mx = (a.x + bb.x) / 2, mz = (a.z + bb.z) / 2;
           const dx = bb.x - a.x, dz = bb.z - a.z, L = Math.hypot(dx, dz) || 1;
           const nx = -dz / L * S.dir, nz = dx / L * S.dir;
-          pos.set(mx + nx * (4.2 + L * 0.9), 1.9, mz + nz * (4.2 + L * 0.9)); look.set(mx, 1.3, mz); fov = 36;
+          pos.set(mx + nx * (6.2 + L * 0.9), 2.3, mz + nz * (6.2 + L * 0.9)); look.set(mx, 1.5, mz); fov = 38;
         } else { pos.set(c.x + Math.sin(th) * 8, 3, c.z + Math.cos(th) * 8); }
         break;
       }
@@ -155,7 +155,7 @@ export class ArenaDirector {
         const a = S.pick?.f, bb = this.otherOf(S.pick, views);
         if (a && bb) {
           const dx = bb.x - a.x, dz = bb.z - a.z, L = Math.hypot(dx, dz) || 1;
-          pos.set(a.x - dx / L * 3.2 + (-dz / L) * 0.9, 1.95, a.z - dz / L * 3.2 + (dx / L) * 0.9); look.set(bb.x, 1.4, bb.z); fov = 38; rate = 4;
+          pos.set(a.x - dx / L * 4.2 + (-dz / L) * 1.1, 2.6, a.z - dz / L * 4.2 + (dx / L) * 1.1); look.set(bb.x, 1.6, bb.z); fov = 40; rate = 4;
         } else pos.set(c.x + 7, 3, c.z + 7);
         break;
       }
@@ -167,11 +167,11 @@ export class ArenaDirector {
       else {
         const k = I.t / I.dur;
         const dir = new V(pos.x - I.pos.x, 0, pos.z - I.pos.z).normalize();
-        const ip = new V(I.pos.x + dir.x * 3.4, 1.7, I.pos.z + dir.z * 3.4);
+        const ip = new V(I.pos.x + dir.x * 4.4, 2.1, I.pos.z + dir.z * 4.4);
         const w = Math.sin(Math.min(1, k) * Math.PI) * I.strength;
         pos.lerp(ip, Math.min(0.85, w));
-        look.lerp(new V(I.pos.x, 1.3, I.pos.z), Math.min(0.9, w));
-        fov = fov + (30 - fov) * Math.min(1, w); rate = 6;
+        look.lerp(new V(I.pos.x, 1.5, I.pos.z), Math.min(0.9, w));
+        fov = fov + (34 - fov) * Math.min(1, w); rate = 6;
       }
     }
     if (this.free) {

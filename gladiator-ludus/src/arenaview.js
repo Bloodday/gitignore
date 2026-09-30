@@ -228,7 +228,7 @@ export class ArenaView {
     }
     if (this.phase !== 'idle' || this.lingering) this.director.update(realDt, this.views, this.battle?.hype || 0);
     if (this.phase !== 'idle' || this.lingering) this.hud.fightUpdate(this.battle, this.views);
-    this.fx.update(dt, w, h);
+    this.fx.update(dt, w, h, realDt);
   }
 
   updateIntro(dt) {

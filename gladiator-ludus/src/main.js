@@ -170,7 +170,7 @@ class App {
       horizon: lerpHex(PAL_DAY.horizon, PAL_DUSK.horizon, t), fog: lerpHex(PAL_DAY.fog, PAL_DUSK.fog, t),
     };
     this.eng.setSun(elev, 300 - t * 40, lerpHex('#fff0d8', v.tint, 0.5 + t * 0.4), pal);
-    this.eng.sun.intensity = 4.6 - t * 0.6;
+    this.eng.sun.intensity = 3.6 - t * 0.5;
     this.colo.bannerMat.color.set(v.banner);
     const cnt = Math.floor(this.colo.crowdCount * (0.45 + 0.55 * v.crowd));
     this.colo.crowdMeshes.forEach(m => { m.count = cnt; });
