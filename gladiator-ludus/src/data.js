@@ -42,8 +42,8 @@ export const CLASSES = {
   },
   retiarius: {
     name: 'Reciario', icon: '🔱', desc: 'Pescador mortal: tridente largo y red.',
-    base: { str: 4, agi: 7, vit: 5, tec: 7, wil: 5 }, growth: { str: 0.6, agi: 1.1, vit: 0.7, tec: 1.3, wil: 0.8 },
-    kit: { weapon: 'tridens', offhand: 'rete', helm: null, armor: 'tunica', greaves: null },
+    base: { str: 5, agi: 7, vit: 7, tec: 7, wil: 5 }, growth: { str: 0.8, agi: 1.1, vit: 1.0, tec: 1.3, wil: 0.8 },
+    kit: { weapon: 'tridens', offhand: 'rete', helm: null, armor: 'cuero', greaves: 'cuero' },
     hire: 1.1,
   },
   secutor: {
@@ -54,8 +54,8 @@ export const CLASSES = {
   },
   dimachaerus: {
     name: 'Dimacero', icon: '⚔️', desc: 'Dos sicas, cero piedad. Ráfagas veloces.',
-    base: { str: 6, agi: 8, vit: 4, tec: 6, wil: 4 }, growth: { str: 0.9, agi: 1.3, vit: 0.6, tec: 1.0, wil: 0.6 },
-    kit: { weapon: 'sicae', offhand: null, helm: 'cassis', armor: 'tunica', greaves: 'cuero' },
+    base: { str: 6, agi: 8, vit: 6, tec: 6, wil: 4 }, growth: { str: 1.0, agi: 1.3, vit: 0.9, tec: 1.0, wil: 0.6 },
+    kit: { weapon: 'sicae', offhand: null, helm: 'cassis', armor: 'cuero', greaves: 'cuero' },
     hire: 1.25,
   },
   hoplomachus: {
@@ -82,16 +82,16 @@ export const BASES = {
   weapon: {
     gladius: { name: 'Gladius', dmg: [8, 12], interval: 1.05, reach: 1.9, style: 'slash', wind: 0.32, hands: 1 },
     sica: { name: 'Sica', dmg: [7, 11], interval: 0.85, reach: 1.8, style: 'slash', wind: 0.26, hands: 1, crit: 0.05 },
-    sicae: { name: 'Sicas gemelas', dmg: [5, 8], interval: 0.62, reach: 1.75, style: 'flurry', wind: 0.2, hands: 2, dual: true },
+    sicae: { name: 'Sicas gemelas', dmg: [7, 10], interval: 0.62, reach: 1.75, style: 'flurry', wind: 0.2, hands: 2, dual: true },
     hasta: { name: 'Hasta', dmg: [9, 14], interval: 1.25, reach: 2.9, style: 'thrust', wind: 0.36, hands: 1 },
-    tridens: { name: 'Tridente', dmg: [10, 14], interval: 1.3, reach: 3.0, style: 'thrust', wind: 0.36, hands: 1 },
+    tridens: { name: 'Tridente', dmg: [13, 18], interval: 1.2, reach: 3.1, style: 'thrust', wind: 0.36, hands: 1 },
     bipennis: { name: 'Bipennis', dmg: [15, 22], interval: 1.65, reach: 2.2, style: 'cleave', wind: 0.5, hands: 2 },
     malleus: { name: 'Malleus', dmg: [13, 19], interval: 1.5, reach: 1.95, style: 'cleave', wind: 0.44, hands: 1 },
   },
   offhand: {
     scutum: { name: 'Scutum', armor: 6, block: 0.22, weight: 1 },
     parma: { name: 'Parma', armor: 3, block: 0.14, weight: 0.5 },
-    rete: { name: 'Rete', armor: 1, block: 0.04, weight: 0.1, dodge: 0.06 },
+    rete: { name: 'Rete', armor: 2, block: 0.04, weight: 0.1, dodge: 0.12 },
   },
   helm: {
     cassis: { name: 'Cassis', armor: 3 },

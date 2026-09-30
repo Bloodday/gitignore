@@ -40,6 +40,7 @@ export class Fighter {
     const cs = combatStats(def);
     const boss = def.isBoss;
     if (boss) { cs.hp *= boss.hpMul; cs.dmgMin *= boss.dmgMul; cs.dmgMax *= boss.dmgMul; cs.armor *= 1.2; cs.moveSpeed *= 0.9; }
+    if (def.handicap) { const h = def.handicap; cs.hp *= h; cs.dmgMin *= h; cs.dmgMax *= h; cs.armor *= h; }
     // táctica elegida por el jugador (sólo su equipo)
     const tac = team === 0 ? battle.tactic : null;
     if (tac === 'aggressive') { cs.dmgMin *= 1.2; cs.dmgMax *= 1.2; cs.armor *= 0.85; cs.moveSpeed *= 1.1; cs.interval *= 0.92; }

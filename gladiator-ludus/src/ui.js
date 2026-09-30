@@ -410,7 +410,8 @@ export class UI {
     const rounds = [];
     const n = m.rounds || 1;
     let boss = null;
-    for (let r = 0; r < n; r++) { const b = buildFoes(A.venue, A.mode, 0, r, this.st); rounds.push(b.foes); boss = boss || b.boss; }
+    const sqLv = squad.length ? squad.reduce((a, g) => a + g.level, 0) / squad.length : 0;
+    for (let r = 0; r < n; r++) { const b = buildFoes(A.venue, A.mode, sqLv, r, this.st); rounds.push(b.foes); boss = boss || b.boss; }
     A.foes = rounds; A.boss = boss; A.odds = null;
     this.scheduleOdds();
   }

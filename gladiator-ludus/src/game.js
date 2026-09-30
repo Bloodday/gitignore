@@ -556,7 +556,7 @@ export class Game {
       st.quests.push({ id: uid(), type: t.id, target: this.questTarget(t), base0: st.stats[t.stat] || 0 });
     }
   }
-  questProgress(q) { const t = QUEST_TYPES.find(x => x.id === q.type); return Math.min(q.target, (this.state.stats[t.stat] || 0) - q.base0); }
+  questProgress(q) { const t = QUEST_TYPES.find(x => x.id === q.type); return Math.max(0, Math.min(q.target, Math.floor((this.state.stats[t.stat] || 0) - q.base0))); }
   questReward(q) { const n = this.state.questsDone; return { gold: Math.round((120 + this.incomeRate * 150) * (1 + n * 0.25)), laurels: 1 + Math.floor(n / 6) }; }
   claimQuest(id) {
     const st = this.state, q = st.quests.find(x => x.id === id);
@@ -605,16 +605,16 @@ export function genEnemy(venue, level, { boss = null, cls = null } = {}) {
   g.isEnemy = true;
   g.name = genName(g.look.female);
   // pequeña variación de dificultad
-  const k = rand(0.92, 1.08);
+  const k = rand(0.84, 1.0);
   for (const s of STATS) g.stats[s] = Math.round(g.stats[s] * k);
-  const rarityBias = level > 25 ? 2 : level > 12 ? 1 : 0;
+  const rarityBias = level > 32 ? 2 : level > 18 ? 1 : 0;
   addKit(g, level, level * 0.35, null);
   for (const slot of SLOT_ORDER) {
     const it = g.equip[slot];
     if (it && it.rarity < rarityBias) it.rarity = rarityBias;
   }
   // habilidades
-  const nSk = Math.min(5, Math.floor(level / 7) + (Math.random() < 0.5 ? 1 : 0));
+  const nSk = Math.min(5, Math.floor(level / 9) + (Math.random() < 0.4 ? 1 : 0));
   for (let i = 0; i < nSk; i++) {
     const id = rollSkill({ ...g, skills: g.skills, level: Math.max(g.level, 8) }, 0);
     if (!id) break;
@@ -634,14 +634,22 @@ export function genEnemy(venue, level, { boss = null, cls = null } = {}) {
 }
 
 // construye los rivales de un combate
-export function buildFoes(venueIdx, modeId, squadPower, round = 0, st = null) {
+/** squadLv: nivel medio del equipo del jugador; los rivales se adaptan a él dentro del rango de la sede */
+export function buildFoes(venueIdx, modeId, squadLv = 0, round = 0, st = null) {
   const venue = VENUES[venueIdx];
   const mode = MODES[modeId];
   const span = venue.lv[1] - venue.lv[0];
   const foes = [];
   let baseLv;
   if (venue.endless) baseLv = venue.lv[0] + Math.floor((st?.stats.eternal || 0) * 1.5) + round * 2;
+  else if (squadLv > 0) baseLv = clamp(squadLv + rand(-0.8, 0.7) + round * 0.8, venue.lv[0], venue.lv[1]);
   else baseLv = venue.lv[0] + span * 0.35 + round * Math.max(1, span * 0.15);
+  // el primer combate de la partida es un rival asequible
+  if (st && st.stats.fights === 0 && venueIdx === 0 && !mode.boss) {
+    const e = genEnemy(venue, 1, { cls: 'murmillo' });
+    e.handicap = 0.6; e.skills = [];
+    return { foes: [e] };
+  }
   if (mode.boss) {
     const boss = pick(BOSSES);
     const e = genEnemy(venue, baseLv + span * 0.1, { boss });
@@ -649,7 +657,7 @@ export function buildFoes(venueIdx, modeId, squadPower, round = 0, st = null) {
     return { foes, boss };
   }
   for (let i = 0; i < mode.foes; i++) {
-    const lv = baseLv + rand(-span * 0.25, span * 0.25) - (mode.foes > 1 ? 1 : 0);
+    const lv = squadLv > 0 && !venue.endless ? clamp(baseLv + rand(-0.6, 0.6), venue.lv[0], venue.lv[1]) : baseLv + rand(-span * 0.25, span * 0.25) - (mode.foes > 1 ? 1 : 0);
     foes.push(genEnemy(venue, lv));
   }
   return { foes };

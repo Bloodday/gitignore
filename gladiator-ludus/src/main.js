@@ -306,7 +306,8 @@ class App {
         if (this.ui.modalOpen) { this.autoTimer = setTimeout(() => this.onResultClosed(v), 800); return; }
         const foes = [];
         let boss = null;
-        for (let r = 0; r < (MODES[setup.modeId].rounds || 1); r++) { const b = buildFoes(setup.venueIdx, setup.modeId, 0, r, this.st); foes.push(b.foes); boss = boss || b.boss; }
+        const sqLv = squad.reduce((a, g) => a + g.level, 0) / squad.length;
+        for (let r = 0; r < (MODES[setup.modeId].rounds || 1); r++) { const b = buildFoes(setup.venueIdx, setup.modeId, sqLv, r, this.st); foes.push(b.foes); boss = boss || b.boss; }
         // reinicia la batalla sin volver al ludus
         this.arena.clear();
         document.getElementById('ui').classList.add('hidden');
