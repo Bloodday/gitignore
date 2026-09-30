@@ -489,10 +489,10 @@ export class UI {
     const foesFlat = A.foes ? A.foes.flat() : [];
     if (foesFlat.length) {
       const rw = rewardFor(A.venue, A.mode, foesFlat, true, 0.3, squad);
-      h += `<div class="card" style="margin-top:12px"><div data-odds></div><div class="row" style="gap:16px;margin-top:8px;flex-wrap:wrap"><span class="small">🪙 <b class="gold">${fmt(rw.gold * (MODES[A.mode].rounds || 1))}</b></span><span class="small">⭐ <b class="gold">${fmt(rw.fame * (MODES[A.mode].rounds || 1))}</b></span><span class="small">✨ <b class="gold">${fmt(rw.xp * (MODES[A.mode].rounds || 1))}</b> xp</span><span class="small dim">+ botín</span></div></div>`;
-    }
+      h += `<div class="cta"><div class="card" style="margin-top:0"><div data-odds></div><div class="row" style="gap:16px;margin-top:8px;flex-wrap:wrap"><span class="small">🪙 <b class="gold">${fmt(rw.gold * (MODES[A.mode].rounds || 1))}</b></span><span class="small">⭐ <b class="gold">${fmt(rw.fame * (MODES[A.mode].rounds || 1))}</b></span><span class="small">✨ <b class="gold">${fmt(rw.xp * (MODES[A.mode].rounds || 1))}</b> xp</span><span class="small dim">+ botín</span></div></div>`;
+    } else h += `<div class="cta">`;
     const can = squad.length === m.squad && squad.every(g => this.game.isReady(g));
-    h += `<div class="row" style="margin-top:14px;gap:10px;align-items:center"><button class="btn big red grow ${can ? '' : 'disabled'}" data-act="fight">⚔ ¡A la arena!</button></div>`;
+    h += `<div class="row" style="margin-top:14px;gap:10px;align-items:center"><button class="btn big red grow ${can ? '' : 'disabled'}" data-act="fight">⚔ ¡A la arena!</button></div></div>`;
     h += `<label class="row small dim" style="margin-top:10px;gap:8px;cursor:pointer"><input type="checkbox" data-act="auto" ${st.settings.auto ? 'checked' : ''}> Combate automático: repetir esta batalla al terminar (mientras el equipo esté en forma)</label>`;
     if (!can) h += `<div class="tiny" style="color:#ff9a8a;margin-top:6px">Elige ${m.squad} gladiador${m.squad > 1 ? 'es' : ''} en forma.</div>`;
     setTimeout(() => this.updateOdds(), 0);
