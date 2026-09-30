@@ -270,13 +270,15 @@ export class ArenaView {
       switch (e.t) {
         case 'attack': {
           const v = this.viewOf(e.f); if (!v) break;
-          v.anim.playAttack({ dur: e.dur, windT: e.windT, hand: e.hand });
+          v.anim.playAttack({ dur: e.dur, windT: e.windT, hand: e.hand, heavy: e.heavy });
+          if (e.heavy) { fx.ring(new V(e.f.x, 0, e.f.z), 1.6, '#ffb060', 0.35, 0.3); au.swoosh(1.6); }
           const key = e.style === 'flurry' && e.hand === 1 ? 'weaponL' : 'weaponR';
           v.schedule(Math.max(0, e.windT - 0.14), () => { v.setTrail(key, true); au.swoosh(e.style === 'cleave' ? 1.4 : 1); });
           v.schedule(e.windT + 0.22, () => v.setTrail(key, false));
           break;
         }
         case 'whiff': break;
+        case 'hop': { const v = this.viewOf(e.f); if (v) { v.anim.playReact('dodge'); fx.dust(new V(e.f.x, 0, e.f.z), 4, 1.2, 0.6); } break; }
         case 'hit': this.onHit(e); break;
         case 'miss': {
           const vv = this.viewOf(e.tgt); if (!vv) break;
@@ -325,6 +327,7 @@ export class ArenaView {
       fx.float(String(Math.round(dmg)) + (crit ? '!' : ''), vd.headPos, (crit ? 'crit ' : '') + team + (skill ? ' skillhit' : ''));
     }
     if (this.settings.shake) rig.shake(Math.min(0.9, 0.12 + frac * 2.4 + (crit ? 0.3 : 0)) * (blocked ? 0.5 : 1));
+    if (e.heavy) { rig.shake(0.9); rig.fovPunch(1.6); this.hitStop = Math.max(this.hitStop, 0.11); this.slow = 0.3; this.slowT = 0.28; fx.ring(new V(dst.x, 0, dst.z), 3.2, '#ffd9a0', 0.5, 0.4); fx.dust(new V(dst.x, 0, dst.z), 10, 3, 1.1); fx.float('¡GOLPE FUERTE!', new V(dst.x, vd.headPos.y + 0.5, dst.z), 'skillname'); this.director.focusImpact(new V(dst.x, 1.2, dst.z), 0.8, 0.9); }
     if (crit) { rig.fovPunch(1); this.hitStop = Math.max(this.hitStop, 0.085); this.director.focusImpact(new V(dst.x, 1.2, dst.z), 0.7, 0.8); }
     else if (frac > 0.1) this.hitStop = Math.max(this.hitStop, 0.04);
     if (skill && skill !== 'phoenix') { vd.anim.hit(1.4); }

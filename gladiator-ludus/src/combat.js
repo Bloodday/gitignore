@@ -181,7 +181,7 @@ export class Battle {
         if (!f.has('root')) {
           f.strafeT -= dt; if (f.strafeT < 0) { f.strafe *= -1; f.strafeT = rand(1.4, 3.2); }
           const dx = tgt.x - f.x, dz = tgt.z - f.z, L = Math.hypot(dx, dz) || 1;
-          const sp = f.cs.moveSpeed * 0.3 * this.slowMul(f);
+          const sp = f.cs.moveSpeed * 0.55 * this.slowMul(f);
           f.x += (-dz / L) * f.strafe * sp * dt; f.z += (dx / L) * f.strafe * sp * dt;
           // retroceso si está demasiado cerca con arma larga
           if (d < reach * 0.4 && f.cs.style === 'thrust') { f.x -= (dx / L) * sp * 1.2 * dt; f.z -= (dz / L) * sp * 1.2 * dt; }
@@ -190,7 +190,8 @@ export class Battle {
     } else if (!f.has('root')) {
       f.state = 'move';
       const dx = tgt.x - f.x, dz = tgt.z - f.z, L = Math.hypot(dx, dz) || 1;
-      const sp = f.cs.moveSpeed * this.slowMul(f) * f.aggr * (f.has('frenzy') ? 1.15 : 1);
+      const sprint = d > 5 ? 1.45 : 1;
+      const sp = f.cs.moveSpeed * this.slowMul(f) * f.aggr * sprint * (f.has('frenzy') ? 1.15 : 1);
       // ligera trayectoria curva
       const cx = -dz / L * f.strafe * 0.25;
       const cz = dx / L * f.strafe * 0.25;
@@ -258,13 +259,17 @@ export class Battle {
     let interval = cs.interval;
     const haste = 1 + f.buffVal('haste', 0) + f.buffVal('frenzy', 0);
     interval /= haste;
+    if (this.time - (f.lastAtk ?? -9) > 2.2) f.combo = 0;
+    const heavy = !opts.dur && (f.combo || 0) >= 2 && f.size < 1.3;
+    if (heavy) interval *= 1.35;
     const dur = opts.dur || interval;
-    const windT = opts.dur ? dur * 0.45 : Math.min(cs.wind / Math.sqrt(haste), dur * 0.6);
-    f.atk = { dur, windT, hit: false, hand: f.hand, t: 0, style: cs.style, riposte: !!opts.riposte };
+    const windT = opts.dur ? dur * 0.45 : Math.min(cs.wind * (heavy ? 1.5 : 1) / Math.sqrt(haste), dur * 0.62);
+    f.atk = { dur, windT, hit: false, hand: f.hand, t: 0, style: cs.style, riposte: !!opts.riposte, heavy };
+    f.lastAtk = this.time;
     f.hand = 1 - f.hand;
     f.state = 'windup'; f.t = 0;
     f.attackCd = interval;
-    this.emit({ t: 'attack', f, target: f.target, dur, windT, hand: f.atk.hand, style: cs.style });
+    this.emit({ t: 'attack', f, target: f.target, dur, windT, hand: f.atk.hand, style: cs.style, heavy });
   }
 
   updateAttack(f, dt) {
@@ -283,10 +288,16 @@ export class Battle {
         else this.emit({ t: 'whiff', f });
       }
       // avance con el golpe
-      if (f.cs.style !== 'thrust') { f.vx += Math.sin(f.yaw) * 1.4; f.vz += Math.cos(f.yaw) * 1.4; }
+      { const L = a.heavy ? 4.2 : f.cs.style === 'thrust' ? 2.4 : 2.8; f.vx += Math.sin(f.yaw) * L; f.vz += Math.cos(f.yaw) * L; }
     }
     if (a.t >= a.windT + 0.12 && f.state === 'strike') f.state = 'recover';
-    if (a.t >= a.dur) { f.state = 'idle'; f.atk = null; f.t = 0; }
+    if (a.t >= a.dur) {
+      // a veces se retira de un salto tras golpear, para reposicionarse
+      if (!a.riposte && !a.heavy && f.size < 1.3 && Math.random() < 0.28 && f.target?.alive) {
+        f.vx -= Math.sin(f.yaw) * 6.2; f.vz -= Math.cos(f.yaw) * 6.2; this.emit({ t: 'hop', f });
+      }
+      f.state = 'idle'; f.atk = null; f.t = 0;
+    }
   }
 
   rollDamage(f, pct = 1, forceCrit = false) {
@@ -306,15 +317,19 @@ export class Battle {
     if (!extra.noAvoid) {
       if (Math.random() < tgt.cs.dodge) {
         this.emit({ t: 'miss', f, tgt, kind: 'dodge' });
+        { const side = Math.random() < 0.5 ? 1 : -1; tgt.vx += Math.cos(f.yaw) * 5.2 * side; tgt.vz -= Math.sin(f.yaw) * 5.2 * side; }
         this.addHype(0.01);
         this.maybeRiposte(tgt, f);
         return;
       }
     }
-    const { d, crit } = this.rollDamage(f, extra.pct || 1);
+    const heavy = !!f.atk?.heavy && !extra.skill;
+    const { d, crit } = this.rollDamage(f, (extra.pct || 1) * (heavy ? 1.7 : 1));
     let blocked = false, dmg = d;
     if (!extra.noAvoid && Math.random() < tgt.cs.block) { blocked = true; dmg *= 1 - tgt.cs.blockAbsorb; this.maybeRiposte(tgt, f); }
-    this.applyDamage(f, tgt, dmg, { crit, blocked, basic: true, ignoreArmor: extra.ignoreArmor, skill: extra.skill });
+    this.applyDamage(f, tgt, dmg, { crit, blocked, basic: true, heavy, knock: heavy ? 6.5 : undefined, ignoreArmor: extra.ignoreArmor, skill: extra.skill });
+    f.combo = heavy ? 0 : (f.combo || 0) + 1;
+    if (heavy && !blocked && tgt.alive && tgt.size < 1.3) tgt.addBuff('stun', 0.45, 1, f);
   }
 
   maybeRiposte(tgt, atk) {
@@ -347,7 +362,7 @@ export class Battle {
     // reacción
     const dirx = dst.x - src.x, dirz = dst.z - src.z, L = Math.hypot(dirx, dirz) || 1;
     if (!o.noKnock) { const kb = (o.knock ?? (o.crit ? 2.6 : 1.1)) / Math.max(1, dst.size * dst.size); dst.vx += (dirx / L) * kb; dst.vz += (dirz / L) * kb; }
-    this.emit({ t: 'hit', src, dst, dmg: final, crit: !!o.crit, blocked: !!o.blocked, skill: o.skill || null, basic: !!o.basic });
+    this.emit({ t: 'hit', src, dst, dmg: final, crit: !!o.crit, blocked: !!o.blocked, skill: o.skill || null, basic: !!o.basic, heavy: !!o.heavy });
     this.addHype(o.crit ? 0.05 : 0.012 + final / dst.maxHp * 0.15);
     // interrumpe ataques con golpes críticos/bloqueos no
     if (dst.alive && dst.hp > 0 && (o.crit && dst.size < 1.3) && dst.state === 'windup' && Math.random() < 0.5) { dst.state = 'idle'; dst.atk = null; dst.attackCd = 0.25; }

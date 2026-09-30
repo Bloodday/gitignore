@@ -113,7 +113,7 @@ export class ArenaDirector {
     const alive = views.filter(v => v.f.alive);
     let kind = kinds[Math.floor(Math.random() * kinds.length)];
     if (alive.length < 2 && (kind === 'duel' || kind === 'shoulder')) kind = 'wide';
-    this.shot = { kind, dur: rnd(5, 8.5), t: 0, dir: Math.random() < 0.5 ? 1 : -1, off: rnd(0, 6.28), pick: alive.length ? alive[Math.floor(Math.random() * alive.length)] : null };
+    this.shot = { kind, dur: rnd(3.2, 5.6), t: 0, dir: Math.random() < 0.5 ? 1 : -1, off: rnd(0, 6.28), pick: alive.length ? alive[Math.floor(Math.random() * alive.length)] : null };
   }
   /** cierre de impacto: acerca la cámara al punto brevemente */
   focusImpact(pos, dur = 0.9, strength = 1) {

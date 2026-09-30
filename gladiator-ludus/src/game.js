@@ -191,13 +191,13 @@ export function combatStats(g) {
   const setN = setCount(g);
   const setB = setN >= 6 ? 0.15 : setN >= 4 ? 0.06 : 0;
   const rm = g.isEnemy ? { hp: 0, crit: 0 } : RELIC_MOD;
-  const hp = (100 + s.vit * 14 + g.level * 9) * (1 + affixSum(g, 'hpPct') + rk('will') * 0.07 + rm.hp + setB);
+  const hp = (100 + s.vit * 14 + g.level * 9) * 1.25 * (1 + affixSum(g, 'hpPct') + rk('will') * 0.07 + rm.hp + setB);
   const dmgMul = 1 + affixSum(g, 'dmgPct') + rk('iron') * 0.06 + setB;
   const cs = {
     level: g.level, stats: s,
     hp, armor,
     dmgMin: (wmin + s.str * 0.85) * dmgMul, dmgMax: (wmax + s.str * 0.85) * dmgMul,
-    interval: Math.max(0.3, wb.interval / (1 + s.agi * 0.006)),
+    interval: Math.max(0.26, wb.interval * 0.8 / (1 + s.agi * 0.006)),
     reach: wb.reach, style: wb.style, wind: wb.wind, weapon: wi ? wi.base : null, dual: !!wb.dual,
     crit: Math.min(0.65, 0.04 + s.tec * 0.0025 + affixSum(g, 'crit') + rk('eye') * 0.04 + (wb.crit || 0) + rm.crit),
     critMult: 1.6 + rk('eye') * 0.08 + s.tec * 0.002,
@@ -205,7 +205,7 @@ export function combatStats(g) {
     block: off ? Math.min(0.55, (off.block * (1 + s.tec * 0.004)) + rk('parry') * 0.04) : 0,
     blockAbsorb: 0.55 + rk('parry') * 0.05,
     hasShield: !!off && g.equip.offhand?.base !== 'rete',
-    moveSpeed: (3.3 + s.agi * 0.008) * (1 + rk('fleet') * 0.06),
+    moveSpeed: (4.3 + s.agi * 0.01) * (1 + rk('fleet') * 0.06),
     lifesteal: Math.min(0.4, affixSum(g, 'lifesteal') + rk('vamp') * 0.03),
     thorns: affixSum(g, 'thorns') + rk('thorns') * 0.08,
     skillPower: 1 + s.wil * 0.006,

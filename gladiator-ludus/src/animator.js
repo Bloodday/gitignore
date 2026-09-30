@@ -247,7 +247,10 @@ export class Animator {
 
   /** Lanza una acción (ataque o habilidad). */
   playAttack(atk) {
-    const keys = attackKeys(this.style, atk, atk.hand || 0);
+    let st = this.style;
+    if (atk.heavy && st !== 'thrust') st = 'cleave';
+    const keys = attackKeys(st, atk, atk.hand || 0);
+    if (atk.heavy) for (const k of keys) { for (const j in k.d) { const v = k.d[j]; k.d[j] = [v[0] * 1.25, v[1] * 1.25, v[2] * 1.25]; } }
     this.action = { name: 'attack', t: 0, dur: atk.dur, keys, spin: null };
   }
   playCast(id, dur) {

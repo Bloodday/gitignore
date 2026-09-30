@@ -163,7 +163,6 @@ export class FX {
       this.bolts.push({ mesh: m, n, t: 0, dur: 0.4, on: false, top: new V(), bottom: new V() });
     }
     this.light = new THREE.PointLight('#ffd090', 0, 14, 1.8);
-    scene.add(this.light);
     this.lightT = 0; this.lightI = 0;
     this.motes = 0;
     this.dmgLayer = document.getElementById('dmg-layer');
@@ -312,7 +311,7 @@ export class FX {
       if (k >= 1) { c.on = false; c.mesh.visible = false; continue; }
       const e = Math.min(1, k * 5);
       c.mesh.scale.set(c.r * (1 - k * 0.4), c.h * e, c.r * (1 - k * 0.4));
-      c.mesh.material.color.copy(c.col).multiplyScalar((1 - k) * 0.9);
+      c.mesh.material.color.copy(c.col).multiplyScalar((1 - k) * 0.28);
     }
     for (const b of this.bolts) if (b.on) {
       b.t += dt; const k = b.t / b.dur;
