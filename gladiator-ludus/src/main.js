@@ -288,7 +288,7 @@ class App {
       document.getElementById('ui').classList.remove('hidden');
       this.ui.showResult(sum);
       this.audio.setMode('arena');
-      if (!this.st.tutorial.afterFight) { this.st.tutorial.afterFight = true; setTimeout(() => this.ui.hint('Los heridos necesitan reposo. Revisa Misiones y Reliquias en Legado, y gasta el botín en la Armería.', 8000), 1500); }
+      if (!this.st.tutorial.afterFight) { this.st.tutorial.afterFight = true; setTimeout(() => this.ui.hint('Los heridos necesitan reposo. Revisa «Misiones» para reclamar premios y equipa el botín en la Armería.', 8000), 1500); }
     }
     this.ui.renderRoster();
   }

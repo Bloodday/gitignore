@@ -290,11 +290,11 @@ export const OBJECTIVES = [
   { text: 'Gana 3 combates en total', tab: 'arena', check: g => g.state.stats.wins >= 3, progress: g => [g.state.stats.wins, 3], reward: { gold: 120 } },
   { text: 'Equipa un objeto desde la «Armería» (o la ficha del gladiador)', tab: 'armory', check: (g, f) => f.equipped, reward: { gold: 100 } },
   { text: 'Recluta un tercer gladiador en «Reclutar»', tab: 'market', check: g => g.state.gladiators.length >= 3, reward: { gold: 120 } },
-  { text: 'Completa y reclama una misión en «Legado»', tab: 'legacy', check: g => g.state.questsDone >= 1, reward: { laurels: 1 } },
+  { text: 'Completa y reclama una misión en «Misiones»', tab: 'legacy', check: g => g.state.questsDone >= 1, reward: { laurels: 1 } },
   { text: 'Reúne 120 ⭐ de fama para abrir el Anfiteatro Provincial', tab: 'arena', check: g => g.state.fame >= 120, progress: g => [g.state.fame, 120], reward: { gold: 250 } },
   { text: 'Gana un combate de Melé 3v3', tab: 'arena', check: g => (g.state.stats.meleeWins || 0) >= 1, reward: { gold: 400 } },
-  { text: 'Compra una Reliquia en «Legado» con tus laureles', tab: 'legacy', check: g => Object.values(g.state.relics).some(v => v > 0), reward: { laurels: 1 } },
-  { text: 'Lleva a un gladiador al nivel 10 y manumítelo (Legado)', tab: 'legacy', check: g => g.state.rudis >= 1, progress: g => [Math.max(0, ...g.state.gladiators.map(x => x.level)), 10], reward: { laurels: 2 } },
+  { text: 'Compra una Reliquia en «Misiones» con tus laureles', tab: 'legacy', check: g => Object.values(g.state.relics).some(v => v > 0), reward: { laurels: 1 } },
+  { text: 'Lleva a un gladiador al nivel 10 y manumítelo (desde su ficha)', tab: 'legacy', check: g => g.state.rudis >= 1, progress: g => [Math.max(0, ...g.state.gladiators.map(x => x.level)), 10], reward: { laurels: 2 } },
 ];
 
 // ── mundo / estado ──────────────────────────────────────────────────────────

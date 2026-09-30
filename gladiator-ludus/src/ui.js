@@ -184,7 +184,7 @@ export class UI {
   render() {
     if (!this.tab) return;
     const scroll = this.body.scrollTop;
-    const titles = { ludus: this.selected ? 'Gladiador' : 'Tu Ludus', market: 'Mercado de Gladiadores', armory: 'Armería', build: 'Mejoras del Ludus', arena: 'Entrar a la Arena', legacy: 'Legado y Ajustes' };
+    const titles = { ludus: this.selected ? 'Gladiador' : 'Tu Ludus', market: 'Mercado de Gladiadores', armory: 'Armería', build: 'Mejoras del Ludus', arena: 'Entrar a la Arena', legacy: 'Misiones y Legado' };
     this.title.textContent = titles[this.tab];
     let html = '';
     switch (this.tab) {
@@ -502,9 +502,7 @@ export class UI {
   // ── legado ───────────────────────────────────────────────────────────────
   renderLegacy() {
     const st = this.st, s = st.stats;
-    let h = `<div class="card"><div class="row"><div class="ava" style="width:56px;height:56px;font-size:30px">🗡️</div><div class="grow"><div class="name" style="font-size:17px">${st.rudis} Rudis</div>
-      <div class="small dim">Bonos permanentes: <b class="gold">+${st.rudis * 6}%</b> de ingresos y entrenamiento, <b class="gold">+${st.rudis * 6}%</b> de experiencia.</div></div></div>
-      <div class="dim small" style="margin-top:8px;font-family:var(--ff-b);font-style:italic">Manumite a tus gladiadores veteranos (nivel 10+) desde su ficha: recibirán la libertad y la rudis de madera, y tú recibirás bonos eternos.</div></div>`;
+    let h = '';
     h += `<div class="sec">Misiones · ${st.laurels} 🏅 laureles</div>`;
     for (const q of st.quests) {
       const t = QUEST_TYPES.find(x => x.id === q.type), pr = this.game.questProgress(q), done = pr >= q.target, rw = this.game.questReward(q);
@@ -517,6 +515,9 @@ export class UI {
       h += `<div class="card" style="padding:8px 10px"><div class="row"><div class="ava" style="width:38px;height:38px;font-size:19px">${R.icon}</div><div class="grow"><div class="small" style="font-weight:600">${R.name} <span class="badge-lv" style="min-width:auto;padding:0 7px;height:18px;font-size:10px;border-radius:9px">${lv}</span></div><div class="tiny dim">${R.desc(Math.max(1, lv))}</div></div>
         ${max ? '<span class="tag gold">Máx.</span>' : `<button class="btn sm ${st.laurels >= cost ? '' : 'disabled'}" data-act="relic" data-id="${id}">${cost} 🏅</button>`}</div></div>`;
     }
+    h += `<div class="sec">Legado</div>` + `<div class="card"><div class="row"><div class="ava" style="width:56px;height:56px;font-size:30px">🗡️</div><div class="grow"><div class="name" style="font-size:17px">${st.rudis} Rudis</div>
+      <div class="small dim">Bonos permanentes: <b class="gold">+${st.rudis * 6}%</b> de ingresos y entrenamiento, <b class="gold">+${st.rudis * 6}%</b> de experiencia.</div></div></div>
+      <div class="dim small" style="margin-top:8px;font-family:var(--ff-b);font-style:italic">Manumite a tus gladiadores veteranos (nivel 10+) desde su ficha: recibirán la libertad y la rudis de madera, y tú recibirás bonos eternos.</div></div>`;
     const vets = st.gladiators.filter(g => this.game.canRetire(g));
     if (vets.length) { h += `<div class="sec">Listos para la libertad</div>`; for (const g of vets) h += `<div class="card click" data-act="select" data-goto="ludus" data-id="${g.id}"><div class="row between"><span class="name" style="font-size:14px">${g.name} <span class="dim small">nv ${g.level}</span></span><span class="gold">+${this.game.retireValue(g)} 🗡️</span></div></div>`; }
     h += `<div class="sec">Salón de la Fama</div>`;
@@ -775,6 +776,9 @@ export class UI {
     this.body.querySelectorAll('[data-live-txt]').forEach(e => this.bindLive(e, true));
     // asequibilidad
     document.querySelectorAll('[data-cost]').forEach(e => e.classList.toggle('disabled', st.gold < +e.dataset.cost));
+    // aviso en el botón de Misiones cuando hay algo que reclamar
+    const claim = st.quests.some(q => g.questProgress(q) >= q.target);
+    document.querySelector('.nav-b[data-tab="legacy"]')?.classList.toggle('badge', claim);
   }
   bindLive(e, text) {
     const k = (text ? e.dataset.liveTxt : e.dataset.live).split(':');
