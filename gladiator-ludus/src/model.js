@@ -92,7 +92,7 @@ function sicaShape(len, w, curve) {
 }
 
 // ── dimensiones ─────────────────────────────────────────────────────────────
-const H = { hip: 0.93, thigh: 0.46, shin: 0.45, spine: 0.06, chestY: 0.30, shoulderY: 0.2, neckY: 0.27, upper: 0.30, fore: 0.27 };
+const H = { hip: 0.84, thigh: 0.42, shin: 0.41, spine: 0.06, chestY: 0.30, shoulderY: 0.22, neckY: 0.27, upper: 0.31, fore: 0.29 };
 
 /** Construye el esqueleto como jerarquía de Groups. */
 function buildRig() {
@@ -106,7 +106,7 @@ function buildRig() {
   B.head = g('head', B.neck, 0, 0.03, 0);
   for (const s of ['L', 'R']) {
     const sx = s === 'L' ? 1 : -1;
-    B['sh' + s] = g('sh' + s, B.chest, sx * 0.215, H.shoulderY, 0);
+    B['sh' + s] = g('sh' + s, B.chest, sx * 0.30, H.shoulderY, 0);
     B['el' + s] = g('el' + s, B['sh' + s], 0, -H.upper, 0);
     B['hand' + s] = g('hand' + s, B['el' + s], 0, -H.fore, 0);
     B['hip' + s] = g('hip' + s, B.hips, sx * 0.095, -0.02, 0);
@@ -138,8 +138,9 @@ export class Avatar {
     this.buildBody();
     this.buildEquipment();
     const h = this.look.height * this.sizeMul;
-    this.bones.root.scale.setScalar(h);
-    this.height = 1.8 * h;
+    this.bones.root.scale.setScalar(h * 1.1);
+    this.hipBase = H.hip;
+    this.height = 1.66 * h * 1.1;
     this.root.traverse(o => { if (o.isMesh) { o.frustumCulled = true; } });
   }
 
@@ -168,10 +169,10 @@ export class Avatar {
     const torso = latheProfile([
       [0.075, 0.0], [0.15, 0.01], [0.165, 0.05], [0.150, 0.14], [0.152, 0.22], [0.172, 0.31], [0.19, 0.39], [0.192, 0.46], [0.15, 0.53], [0.072, 0.575], [0.001, 0.58],
     ], 28);
-    torso.scale(1.28 * sw, 1, 0.80 * (f ? 0.94 : 1));
+    torso.scale(1.5 * sw, 1, 0.86 * (f ? 0.94 : 1));
     // pelvis
     const pelvis = latheProfile([[0.001, -0.14], [0.11, -0.12], [0.17, -0.04], [0.17, 0.05], [0.14, 0.09], [0.001, 0.1]], 20);
-    pelvis.scale(1.22 * hw, 1, 0.82);
+    pelvis.scale(1.38 * hw, 1, 0.86);
     body.add(pelvis, skin, [0, 0, 0]);
     const spinePart = new Part();
     spinePart.add(torso, skin, [0, 0.0, 0]);
@@ -193,7 +194,7 @@ export class Avatar {
     head.add(box(0.05, 0.03, 0.03), skin, [0, 0.08, 0.098], [0.25, 0, 0]); // nariz
     for (const s of [-1, 1]) {
       head.add(sphere(0.022, 8, 6), skin, [s * 0.098, 0.095, -0.005], [0, 0, 0], [0.5, 1, 0.8]); // orejas
-      head.add(sphere(0.012, 8, 6), mat('dark'), [s * 0.038, 0.117, 0.088]); // ojos
+      head.add(sphere(0.019, 8, 6), mat('dark'), [s * 0.04, 0.117, 0.088]); // ojos
       head.add(box(0.05, 0.008, 0.012), mat('hair', L.hairColor), [s * 0.038, 0.14, 0.09], [0, 0, -s * 0.12]); // cejas
     }
     if (L.scar) head.add(box(0.008, 0.06, 0.004), mat('skin', '#b87a6a'), [-0.04, 0.12, 0.099], [0, 0, 0.3]);
@@ -208,30 +209,31 @@ export class Avatar {
     this.headGroup = hg;
     if (boss && boss !== 'cyclops') hg.visible = false;
 
+    const lb = bw * 1.3;
     // extremidades
     const sr = f ? 0.92 : 1;
     for (const s of ['L', 'R']) {
       const sx = s === 'L' ? 1 : -1;
       const arm = new Part();
-      arm.add(sphere(0.062 * bw * sr, 14, 10), skin, [0, 0, 0]);
-      arm.add(limbGeo(H.upper, 0.058 * bw * sr, 0.045 * bw * sr, 0.016 * bw), skin);
+      arm.add(sphere(0.062 * lb * sr, 14, 10), skin, [0, 0, 0]);
+      arm.add(limbGeo(H.upper, 0.058 * lb * sr, 0.045 * lb * sr, 0.016 * lb), skin);
       B['sh' + s].add(arm.build());
       const fore = new Part();
-      fore.add(sphere(0.046 * bw * sr, 12, 8), skin, [0, 0, 0]);
-      fore.add(limbGeo(H.fore, 0.046 * bw * sr, 0.034 * bw * sr, 0.012 * bw), skin);
+      fore.add(sphere(0.046 * lb * sr, 12, 8), skin, [0, 0, 0]);
+      fore.add(limbGeo(H.fore, 0.046 * lb * sr, 0.034 * lb * sr, 0.012 * lb), skin);
       B['el' + s].add(fore.build());
       const hand = new Part();
-      hand.add(sphere(0.04, 12, 8), skin, [0, -0.045, 0], [0, 0, 0], [1, 1.15, 0.8]);
+      hand.add(sphere(0.05, 12, 8), skin, [0, -0.045, 0], [0, 0, 0], [1, 1.15, 0.8]);
       hand.add(box(0.05, 0.02, 0.012), skin, [sx * 0.0, -0.085, 0.022]);
       B['hand' + s].add(hand.build());
       // pierna
       const thigh = new Part();
-      thigh.add(sphere(0.085 * bw * sr * (f ? 1.04 : 1), 14, 10), skin, [0, 0.0, 0]);
-      thigh.add(limbGeo(H.thigh, 0.084 * bw * sr * (f ? 1.04 : 1), 0.058 * bw * sr, 0.02 * bw), skin);
+      thigh.add(sphere(0.085 * lb * sr * (f ? 1.04 : 1), 14, 10), skin, [0, 0.0, 0]);
+      thigh.add(limbGeo(H.thigh, 0.084 * lb * sr * (f ? 1.04 : 1), 0.058 * lb * sr, 0.02 * lb), skin);
       B['hip' + s].add(thigh.build());
       const shin = new Part();
-      shin.add(sphere(0.06 * bw * sr, 12, 8), skin, [0, 0, 0]);
-      shin.add(limbGeo(H.shin, 0.058 * bw * sr, 0.04 * bw * sr, 0.022 * bw), skin);
+      shin.add(sphere(0.06 * lb * sr, 12, 8), skin, [0, 0, 0]);
+      shin.add(limbGeo(H.shin, 0.058 * lb * sr, 0.04 * lb * sr, 0.022 * lb), skin);
       B['knee' + s].add(shin.build());
       const foot = new Part();
       foot.add(box(0.085, 0.045, 0.2), skin, [0, -0.02, 0.05]);
@@ -239,6 +241,8 @@ export class Avatar {
       for (let i = 0; i < 3; i++) foot.add(cyl(0.048, 0.048, 0.008, 8), mat('leather', '#5a3820'), [0, -0.0 + i * 0.0, 0.0 + i * 0.05 - 0.02], [Math.PI / 2, 0, 0], [1, 1, 1.0]);
       B['ankle' + s].add(foot.build());
     }
+    for (const sd of ['L', 'R']) { B['hand' + sd].scale.setScalar(1.3); B['ankle' + sd].scale.setScalar(1.3); }
+    B.head.scale.setScalar(1.3);
     // taparrabos
     const cloth = mat('cloth', L.tunic);
     const loin = new Part();
@@ -368,7 +372,7 @@ export class Avatar {
     const prof = [[0.16, 0.02], [0.152, 0.14], [0.154, 0.22], [0.174, 0.31], [0.192, 0.39], [0.194, 0.46], [0.152, 0.53]];
     const shell = (scaleR, m, y0 = 0, y1 = 1) => {
       const pts = prof.map(([r, y]) => [r * scaleR, y]);
-      const g = latheProfile(pts, 28); g.scale(1.28 * sw, 1, 0.8);
+      const g = latheProfile(pts, 28); g.scale(1.5 * sw, 1, 0.86);
       P.add(g, m);
     };
     const trim = this.trimFor(it);
@@ -391,11 +395,11 @@ export class Avatar {
           const y = 0.12 + i * 0.065;
           const t = Math.min(1, (y - 0.02) / 0.5);
           const rr = (0.152 + (0.192 - 0.152) * Math.sin(t * Math.PI * 0.7)) * 1.08;
-          const g = new THREE.CylinderGeometry(rr * 1.03, rr, 0.07, 28, 1, true); g.scale(1.28 * sw, 1, 0.8);
+          const g = new THREE.CylinderGeometry(rr * 1.03, rr, 0.07, 28, 1, true); g.scale(1.5 * sw, 1, 0.86);
           P.add(g, m, [0, y, 0]);
         }
         // hombreras
-        for (const s of [-1, 1]) for (let k = 0; k < 3; k++) P.add(new THREE.SphereGeometry(0.095 - k * 0.012, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.45), m, [s * 0.225 * 1.03, 0.52 - k * 0.028, 0], [0, 0, s * (0.25 + k * 0.08)], [1.1, 1, 1.1]);
+        for (const s of [-1, 1]) for (let k = 0; k < 3; k++) P.add(new THREE.SphereGeometry(0.095 - k * 0.012, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.45), m, [s * 0.30, 0.54 - k * 0.028, 0], [0, 0, s * (0.25 + k * 0.08)], [1.1, 1, 1.1]);
         P.add(box(0.26, 0.05, 0.02), mat('leather', '#3d2412'), [0, 0.12, 0.155]);
         break;
       }
@@ -404,13 +408,18 @@ export class Avatar {
         shell(1.06, m);
         for (const s of [-1, 1]) P.add(sphere(0.088, 14, 10), m, [s * 0.078 * sw * 1.1, 0.41, 0.102], [0, 0, 0], [1.18, 0.9, 0.62]);
         for (let k = 0; k < 3; k++) for (const s of [-1, 1]) P.add(sphere(0.045, 10, 8), m, [s * 0.04, 0.15 + k * 0.058, 0.128], [0, 0, 0], [1, 0.75, 0.5]);
-        for (const s of [-1, 1]) P.add(new THREE.SphereGeometry(0.095, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), m, [s * 0.225, 0.515, 0], [0, 0, s * 0.3], [1.1, 1, 1.1]);
+        for (const s of [-1, 1]) P.add(new THREE.SphereGeometry(0.095, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), m, [s * 0.30, 0.54, 0], [0, 0, s * 0.3], [1.1, 1, 1.1]);
         P.add(new THREE.TorusGeometry(0.06, 0.008, 8, 20), trim, [0, 0.47, 0.11], [0, 0, 0], [1, 0.6, 1]);
         break;
       }
     }
+    // hombreras sobredimensionadas (estilo estilizado)
+    if (it.base !== 'segmentata' && it.base !== 'muscular') {
+      const pm = it.base === 'tunica' ? mat('leather', '#5d3a20') : this.metalFor(it);
+      for (const sd of [-1, 1]) for (let k = 0; k < 3; k++) P.add(new THREE.SphereGeometry(0.15 - k * 0.018, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.5), pm, [sd * 0.31, 0.56 - k * 0.04, 0], [0, 0, sd * (0.3 + k * 0.1)], [1.15, 0.9, 1.15]);
+    }
     // cinturón + faldellín de tiras (pteruges)
-    P.add(new THREE.CylinderGeometry(0.155, 0.152, 0.055, 24), mat('leather', '#3a2312'), [0, 0.03, 0], [0, 0, 0], [1.2 * sw, 1, 0.85]);
+    P.add(new THREE.CylinderGeometry(0.155, 0.152, 0.055, 24), mat('leather', '#3a2312'), [0, 0.03, 0], [0, 0, 0], [1.4 * sw, 1, 0.9]);
     P.add(cyl(0.03, 0.03, 0.012, 14), trim, [0, 0.03, 0.17 * 0.85 + 0.135 * 0.0 + 0.01], [Math.PI / 2, 0, 0]);
     const strip = it.base === 'tunica' ? mat('cloth', col) : mat('leather', '#6d4225');
     const n = it.base === 'tunica' ? 0 : 10;
@@ -672,7 +681,7 @@ export class Avatar {
       for (const s of [-1, 1]) for (let i = 0; i < 4; i++) P.add(box(0.14 - i * 0.02, 0.012, 0.006), trim, [s * (0.08 + i * 0.02), 0.06 + i * 0.045, 0.004], [0, 0, s * (0.35 + i * 0.05)]);
       P.add(box(0.012, 0.3, 0.006), glowM, [0, 0, 0.004]);
       grp.add(P.build());
-      grp.position.set(0.05, -0.12, 0.26); grp.rotation.set(0.0, 0.25, 0); grp.scale.setScalar(0.92);
+      grp.position.set(0.05, -0.12, 0.26); grp.rotation.set(0.0, 0.25, 0); grp.scale.setScalar(1.15);
       grp.children[0].children.forEach(c => c.castShadow = true);
       this.shieldCenter = grp;
     } else if (it.base === 'parma') {

@@ -390,7 +390,7 @@ export class Animator {
       if (bone.rotation.order !== 'YXZ' && ORDER_YXZ.has(j)) bone.rotation.order = 'YXZ';
       bone.rotation.set(P[j][0], P[j][1], P[j][2]);
     }
-    const base = 0.93;
+    const base = this.av.hipBase ?? 0.84;
     if (this.mode === 'dead') {
       const t = this.deadT;
       const fall = easeOut(t / 0.8);
