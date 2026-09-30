@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d0906">
+<title>Ludus Aeterna</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Spectral:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+<div id="app"></div>
+
+<!-- capas de interfaz sobre el canvas -->
+<div id="tags-layer"></div>
+<div id="bars-layer"></div>
+<div id="dmg-layer"></div>
+<div id="flash"></div>
+
+<div id="loading"><div class="ld-inner"><div class="ld-logo">LUDUS AETERNA</div><div class="ld-sub">Forjando la arena…</div><div class="ld-bar"><i></i></div><div class="ld-tip" id="ld-tip"></div></div></div>
+
+<div id="ui" class="hidden">
+  <header id="topbar">
+    <div class="brand"><span class="brand-ico">⚔</span><span class="brand-txt">LUDUS <b>AETERNA</b></span></div>
+    <div class="res">
+      <div class="res-i" data-tip="Denarios: la moneda del ludus."><span class="ic">🪙</span><b id="r-gold">0</b><small id="r-income">+0/s</small></div>
+      <div class="res-i" data-tip="Fama: abre sedes más prestigiosas y aumenta tus ingresos pasivos."><span class="ic">⭐</span><b id="r-fame">0</b></div>
+      <div class="res-i" data-tip="Rudis: espadas de madera de la libertad. Cada una da bonos permanentes (+6% oro/entrenamiento)."><span class="ic">🗡️</span><b id="r-rudis">0</b></div>
+    </div>
+    <div class="tools">
+      <button class="icon-btn" id="btn-sound" data-tip="Sonido">🔊</button>
+      <button class="icon-btn" id="btn-music" data-tip="Música">🎵</button>
+      <button class="icon-btn" id="btn-fs" data-tip="Pantalla completa">⛶</button>
+      <button class="icon-btn" id="btn-settings" data-tip="Ajustes">⚙</button>
+    </div>
+  </header>
+
+  <nav id="nav">
+    <button data-tab="ludus" class="nav-b"><span>🏛️</span><em>Ludus</em></button>
+    <button data-tab="market" class="nav-b"><span>🏺</span><em>Reclutar</em></button>
+    <button data-tab="armory" class="nav-b"><span>⚔️</span><em>Armería</em></button>
+    <button data-tab="build" class="nav-b"><span>🏗️</span><em>Mejoras</em></button>
+    <button data-tab="arena" class="nav-b primary"><span>🏟️</span><em>Arena</em></button>
+    <button data-tab="legacy" class="nav-b"><span>🌿</span><em>Legado</em></button>
+  </nav>
+
+  <aside id="panel" class="closed">
+    <div id="panel-head"><h2 id="panel-title"></h2><button class="icon-btn small" id="panel-close">✕</button></div>
+    <div id="panel-body"></div>
+  </aside>
+
+  <div id="roster"></div>
+  <div id="toasts"></div>
+  <div id="hint"></div>
+</div>
+
+<!-- HUD del combate -->
+<div id="fight-hud" class="hidden">
+  <div id="fh-top">
+    <div class="fh-team left"><div class="fh-name" id="fh-n0"></div><div class="fh-bar"><div class="fh-ghost" id="fh-g0"></div><div class="fh-fill" id="fh-f0"></div></div></div>
+    <div class="fh-mid"><div id="fh-venue"></div><div class="hype"><span>Favor de la multitud</span><div class="hype-bar"><i id="hype-fill"></i></div></div></div>
+    <div class="fh-team right"><div class="fh-name" id="fh-n1"></div><div class="fh-bar"><div class="fh-ghost" id="fh-g1"></div><div class="fh-fill" id="fh-f1"></div></div></div>
+  </div>
+  <div id="fh-log"></div>
+  <div id="fh-ctrl">
+    <button class="spd on" data-spd="1">1×</button><button class="spd" data-spd="2">2×</button><button class="spd" data-spd="3">3×</button><button class="spd" data-spd="8" data-tip="Saltar combate">⏩</button>
+    <span class="sep"></span>
+    <button id="cam-toggle" data-tip="Cámara: automática / libre">🎥 Auto</button>
+    <button id="hud-toggle" data-tip="Ocultar interfaz">👁</button>
+  </div>
+  <div id="banner"><div class="b-main"></div><div class="b-sub"></div></div>
+</div>
+
+<div id="modal-root"></div>
+<div id="tooltip"></div>
+<div id="nogpu" class="hidden"></div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
