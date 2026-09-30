@@ -10,6 +10,7 @@ import {
 } from './game.js';
 import { estimateWin } from './combat.js';
 import { QUEST_TYPES, RELICS } from './data.js';
+import { OBJECTIVES } from './game.js';
 import { pickEvent } from './events.js';
 
 const ICONS = {
@@ -55,6 +56,26 @@ export class UI {
     $('#btn-music').addEventListener('click', () => { const s = this.st.settings; s.music = !s.music; this.hooks.audio.setMusic(s.music); this.refreshTools(); });
     $('#btn-fs').addEventListener('click', () => { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen?.(); });
     $('#btn-settings').addEventListener('click', () => this.openSettings());
+    $('#btn-help').addEventListener('click', () => this.showHelp(false));
+    $('#objective').addEventListener('click', () => {
+      const o = OBJECTIVES[this.st.tutorial.step]; if (!o) return;
+      this.audio().click();
+      if (o.roster) { this.hint('Toca uno de los retratos de la parte inferior.', 3500); return; }
+      if (o.tab === 'ludus' && !this.selected && this.st.gladiators[0]) { this.selected = this.st.gladiators[0].id; this.hooks.selectGladiator?.(this.selected); }
+      if (o.tab) this.openTabForce(o.tab);
+    });
+    // en pantallas táctiles no hay "hover": un toque muestra la ayuda
+    document.addEventListener('click', e => {
+      if (!matchMedia('(hover: none)').matches) return;
+      const t = e.target.closest?.('[data-tipk],[data-tip]');
+      if (!t || e.target.closest('[data-act],[data-m]')) return;
+      const html = t.dataset.tipk ? this.tipHTML(t.dataset.tipk) : t.dataset.tip; if (!html) return;
+      this.tip.innerHTML = html; this.tip.classList.add('on');
+      const r = t.getBoundingClientRect();
+      this.tip.style.left = Math.max(8, Math.min(innerWidth - this.tip.offsetWidth - 8, r.left)) + 'px';
+      this.tip.style.top = Math.max(8, r.top - this.tip.offsetHeight - 8) + 'px';
+      clearTimeout(this._tipT); this._tipT = setTimeout(() => this.hideTip(), 3200);
+    });
     document.querySelectorAll('#fh-ctrl .spd').forEach(b => b.addEventListener('click', () => {
       document.querySelectorAll('#fh-ctrl .spd').forEach(x => x.classList.remove('on')); b.classList.add('on');
       const s = +b.dataset.spd; if (s === 8) this.hooks.skipFight(); else { this.hooks.setSpeed(s); this.st.settings.speed = s; }
@@ -188,7 +209,7 @@ export class UI {
     this._rosterKey = key;
     let h = '';
     for (const g of st.gladiators) {
-      const act = g.wounded > 0 ? '🩹' : { str: '💪', agi: '🏃', vit: '❤️', tec: '🎯', wil: '🔥', rest: '💤' }[g.activity];
+      const act = g.wounded > 0 ? '🩹' : g.resting ? '💤' : { str: '💪', agi: '🏃', vit: '❤️', tec: '🎯', wil: '🔥', rest: '💤' }[g.activity];
       h += `<div class="rc ${this.selected === g.id ? 'sel' : ''} ${g.wounded > 0 ? 'hurt' : ''}" data-act="select" data-id="${g.id}"><span class="badge-lv rl" style="min-width:20px;height:20px;font-size:10.5px">${g.level}</span><span class="ra">${act}</span><div class="ava">${CLASSES[g.cls].icon}</div><div class="rn">${g.name.split(' ')[0]}</div><div class="bar thin rb"><i data-live="xp:${g.id}" style="width:0"></i></div></div>`;
     }
     if (st.gladiators.length < this.game.capacity()) h += `<div class="rc add" data-act="goto" data-tab="market" data-tip="Reclutar un nuevo gladiador">＋</div>`;
@@ -232,7 +253,7 @@ export class UI {
       <div class="grow"><div class="row between"><span class="name" style="font-size:18px">${g.name}</span><span class="badge-lv" style="min-width:30px;height:30px;font-size:15px">${g.level}</span></div>
       <div class="dim small">${c.name}${g.look.female ? ' (gladiatrix)' : ''} · ${g.wins}V ${g.losses}D · ${g.kills} bajas${g.talent ? ` · Talento ${STAT_INFO[g.talent].icon} ${STAT_INFO[g.talent].name}` : ''}</div></div></div>
       <div class="row between tiny dim" style="margin-top:8px"><span>Experiencia</span><span data-live-txt="xp:${g.id}"></span></div><div class="bar xp"><i data-live="xp:${g.id}"></i></div>
-      <div class="row between tiny dim" style="margin-top:7px"><span>Fatiga</span><span data-live-txt="fat:${g.id}"></span></div><div class="bar fat thin"><i data-live="fat:${g.id}"></i></div>
+      <div class="row between tiny dim" style="margin-top:7px"><span>Fatiga <span class="dim2">(al llegar a 100 descansa solo)</span></span><span data-live-txt="fat:${g.id}"></span></div><div class="bar fat thin"><i data-live="fat:${g.id}"></i></div>
       ${g.wounded > 0 ? `<div class="row between" style="margin-top:9px"><span class="small" style="color:#ff8a7a">🩹 Herido · <span data-live-txt="wound:${g.id}"></span></span><button class="btn sm red" data-act="heal" data-id="${g.id}" data-cost="${Math.round(g.wounded * 1.2 + 10)}">Curar <span class="cost">🪙 ${fmt(g.wounded * 1.2 + 10)}</span></button></div>` : ''}
     </div>`;
     h += `<div class="sec">Atributos y entrenamiento</div>`;
@@ -245,7 +266,7 @@ export class UI {
         <div class="bar thin"><i data-live="prog:${g.id}:${s}" style="width:${on ? g.prog[s] * 100 : 0}%"></i></div></div>
         <div class="val"><span data-live-txt="stat:${g.id}:${s}">${g.stats[s]}</span>${bonus ? `<small>+${bonus}</small>` : ''}</div></div>`;
     }
-    h += `<div class="stat ${g.activity === 'rest' ? 'on' : ''}" data-act="activity" data-id="${g.id}" data-v="rest"><div class="ic">💤</div><div><div class="nm">Descansar</div><div class="dim tiny">Recupera fatiga para entrenar a pleno rendimiento.</div></div><div></div></div>`;
+    h += `<div class="stat ${g.activity === 'rest' ? 'on' : ''}" data-act="activity" data-id="${g.id}" data-v="rest"><div class="ic">💤</div><div><div class="nm">Solo descansar</div><div class="dim tiny">No entrena; recupera la fatiga más rápido.</div></div><div></div></div>`;
     // habilidades
     const slots = skillSlots(g);
     h += `<div class="sec">Habilidades (${g.skills.length}/${slots})</div><div class="skills">`;
@@ -401,9 +422,9 @@ export class UI {
       if (!squad.length || !A.foes) return;
       let p = 1;
       const hp = squad.map(g => ({ ...g, _hpFrac: 1 }));
-      const r0 = estimateWin(hp, A.foes[0], 8);
+      const r0 = estimateWin(hp, A.foes[0], 8, { tactic: A.tactic });
       p = r0;
-      if (A.foes.length > 1) for (let i = 1; i < A.foes.length; i++) p *= Math.min(0.97, estimateWin(squad.map(g => ({ ...g, _hpFrac: 0.7 })), A.foes[i], 6) + 0.05);
+      if (A.foes.length > 1) for (let i = 1; i < A.foes.length; i++) p *= Math.min(0.97, estimateWin(squad.map(g => ({ ...g, _hpFrac: 0.7 })), A.foes[i], 6, { tactic: A.tactic }) + 0.05);
       A.odds = p;
       if (this.tab === 'arena') this.updateOdds();
     }, 30);
@@ -421,6 +442,7 @@ export class UI {
     this.ensureArena();
     const A = this.arena, st = this.st;
     const m = MODES[A.mode], venue = VENUES[A.venue];
+    A.tactic = A.tactic || st.settings.tactic || 'balanced';
     const key = A.venue + A.mode + A.squad.join(',');
     if (!A.foes || A.key !== key) { A.key = key; this.genFoes(); }
     const ready = st.gladiators.filter(g => this.game.isReady(g));
@@ -457,6 +479,11 @@ export class UI {
       }
     });
     h += `<button class="btn ghost sm" data-act="rerollFoes" style="margin-top:2px">🎲 Otros rivales</button>`;
+    h += `<div class="sec">5 · Táctica</div><div class="tactics">`;
+    for (const [id, tn] of [['aggressive', ['⚔️', 'Agresiva', '+20% daño, −15% armadura, más rápidos']], ['balanced', ['⚖️', 'Equilibrada', 'Sin modificadores']], ['defensive', ['🛡️', 'Defensiva', '+25% armadura y bloqueo, −12% daño']]]) {
+      h += `<div class="mode ${A.tactic === id ? 'on' : ''}" data-act="tactic" data-v="${id}"><span class="mi">${tn[0]}</span><b>${tn[1]}</b><div class="tiny dim">${tn[2]}</div></div>`;
+    }
+    h += `</div>`;
     // resumen
     const squad = A.squad.map(id => this.gl(id)).filter(Boolean);
     const foesFlat = A.foes ? A.foes.flat() : [];
@@ -524,7 +551,7 @@ export class UI {
     au.init();
     switch (act) {
       case 'select': {
-        this.selected = id; au.click();
+        this.selected = id; au.click(); g.flag('opened');
         this.hooks.selectGladiator?.(id);
         if (t.dataset.goto || this.tab === 'ludus' || !this.tab) { this.openTabForce('ludus'); }
         this._rosterKey = null; this.renderRoster();
@@ -534,7 +561,7 @@ export class UI {
       case 'back': this.selected = null; this.hooks.selectGladiator?.(null); this._rosterKey = null; this.render(); au.click(); break;
       case 'activity': {
         const gl = this.gl(id); if (!gl) break;
-        gl.activity = t.dataset.v; au.click(); this.render(); this._rosterKey = null; break;
+        gl.activity = t.dataset.v; gl.resting = false; au.click(); g.flag('trainSet'); this.render(); this._rosterKey = null; break;
       }
       case 'heal': { const gl = this.gl(id); if (gl && g.heal(gl)) { au.coin(); this.toast('🩹', `${gl.name} ha sido curado.`, 'good'); } else au.deny(); this.render(); break; }
       case 'slot': this.openEquipModal(id, t.dataset.slot); au.click(); break;
@@ -570,15 +597,16 @@ export class UI {
         else { A.squad.push(id); if (A.squad.length > m.squad) A.squad.shift(); }
         A.foes = null; au.click(); this.render(); break;
       }
+      case 'tactic': this.arena.tactic = t.dataset.v; st.settings.tactic = t.dataset.v; this.arena.odds = null; this.scheduleOdds(); au.click(); this.render(); break;
       case 'rerollFoes': this.arena.foes = null; this.arena.key = ''; au.click(); this.render(); break;
       case 'auto': st.settings.auto = t.checked; break;
       case 'fight': {
         const A = this.arena, m = MODES[A.mode];
         const squad = A.squad.map(i => this.gl(i)).filter(Boolean);
         if (squad.length !== m.squad || !squad.every(x => g.isReady(x))) { au.deny(); break; }
-        st.lastSetup = { venue: A.venue, mode: A.mode, squad: [...A.squad] };
+        st.lastSetup = { venue: A.venue, mode: A.mode, squad: [...A.squad], tactic: A.tactic };
         this.closePanel();
-        this.hooks.startFight({ venueIdx: A.venue, modeId: A.mode, squad, foes: A.foes, boss: A.boss });
+        this.hooks.startFight({ venueIdx: A.venue, modeId: A.mode, squad, foes: A.foes, boss: A.boss, tactic: A.tactic });
         break;
       }
       case 'claimQuest': { const r = g.claimQuest(id); if (r) { au.levelUp(); this.toast('🏅', `Misión cumplida: +${fmt(r.gold)} 🪙 y +${r.laurels} 🏅`, 'gold'); } else au.deny(); this.render(); break; }
@@ -602,10 +630,10 @@ export class UI {
       case 'equip': {
         const gid = document.getElementById('eq-target').value; const gl = this.gl(gid);
         const r = g.equip(gl, id);
-        if (r && r.ok === false) { this.toast('⚠️', r.why, 'bad'); au.deny(); } else { au.equip(); this.hooks.rebuildAvatar?.(gid); }
+        if (r && r.ok === false) { this.toast('⚠️', r.why, 'bad'); au.deny(); } else { au.equip(); g.flag('equipped'); this.hooks.rebuildAvatar?.(gid); }
         this.closeModal(); this.render(); break;
       }
-      case 'equipTo': { const gl = this.gl(t.dataset.gid); const r = g.equip(gl, id); if (r && r.ok === false) { this.toast('⚠️', r.why, 'bad'); au.deny(); } else { au.equip(); this.hooks.rebuildAvatar?.(gl.id); } this.closeModal(); this.render(); break; }
+      case 'equipTo': { const gl = this.gl(t.dataset.gid); const r = g.equip(gl, id); if (r && r.ok === false) { this.toast('⚠️', r.why, 'bad'); au.deny(); } else { au.equip(); g.flag('equipped'); this.hooks.rebuildAvatar?.(gl.id); } this.closeModal(); this.render(); break; }
       case 'unequip': { const gl = this.gl(id); g.unequip(gl, t.dataset.slot); au.equip(); this.hooks.rebuildAvatar?.(gl.id); this.closeModal(); this.render(); break; }
       case 'forge': { const it = this.findItem(id); if (it && g.upgradeItem(it)) { au.buy(); this.hooks.rebuildAll?.(); this.openItemModal(id); this.render(); } else au.deny(); break; }
       case 'sell': { const v = g.sell(id); if (v) { au.coin(); this.toast('🪙', `Vendido por ${fmt(v)}.`, 'gold'); } this.closeModal(); this.render(); break; }
@@ -661,6 +689,44 @@ export class UI {
     const btns = this._ev.choices.map((c, i) => `<button class="btn ${c.cost ? '' : 'ghost'}" data-m="event" data-i="${i}" ${c.cost ? `data-cost="${c.cost}"` : ''}>${c.label}${c.cost ? ` <span class="cost">🪙 ${fmt(c.cost)}</span>` : ''}</button>`).join('');
     this.showModal(`<div class="modal" style="text-align:center"><div style="font-size:48px">${ev.icon}</div><h1 style="font-size:22px">${ev.title}</h1><div class="sub" style="font-style:normal">${ev.text(g)}</div><div class="row" style="justify-content:center;gap:10px;flex-wrap:wrap">${btns}</div></div>`, false, true);
     this.audio().horn?.();
+  }
+
+  renderObjective() {
+    const T = this.st.tutorial, o = OBJECTIVES[T.step], el = $('#objective');
+    document.querySelectorAll('.nav-b.hl,.rc.hl').forEach(x => x.classList.remove('hl'));
+    if (!o || document.body.classList.contains('in-fight')) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    $('#ob-n').textContent = `${T.step + 1}/${OBJECTIVES.length}`;
+    if ($('#ob-t').textContent !== o.text) $('#ob-t').textContent = o.text;
+    const pr = o.progress ? o.progress(this.game) : null;
+    $('#ob-bar').style.display = pr ? '' : 'none';
+    if (pr) $('#ob-bar i').style.width = Math.min(100, pr[0] / pr[1] * 100).toFixed(0) + '%';
+    const rw = [o.reward.gold ? `🪙 ${o.reward.gold}` : '', o.reward.laurels ? `🏅 ${o.reward.laurels}` : ''].filter(Boolean).join(' + ');
+    $('#ob-r').textContent = `Premio: ${rw}${pr ? ` · ${fmt(pr[0])}/${fmt(pr[1])}` : ''} · toca aquí para ir`;
+    if (o.roster) document.querySelectorAll('.rc:not(.add)').forEach(x => x.classList.add('hl'));
+    else if (o.tab && this.tab !== o.tab) document.querySelector(`.nav-b[data-tab="${o.tab}"]`)?.classList.add('hl');
+  }
+  onObjective(o) {
+    const rw = [o.reward.gold ? `+${o.reward.gold} 🪙` : '', o.reward.laurels ? `+${o.reward.laurels} 🏅` : ''].filter(Boolean).join(' ');
+    this.toast('📜', `<b>¡Objetivo cumplido!</b> ${rw}`, 'gold');
+    this.audio().buy();
+    const el = $('#objective'); el.classList.remove('done'); void el.offsetWidth; el.classList.add('done');
+    this.renderObjective();
+  }
+  showHelp(first) {
+    const card = (i, t, p) => `<div class="card"><div class="hi">${i}</div><b>${t}</b><p>${p}</p></div>`;
+    this.showModal(`<div class="modal" style="width:min(640px,100%)"><h1 style="font-size:24px">${first ? 'Bienvenido, lanista' : 'Cómo se juega'}</h1>
+      <div class="sub">Diriges una escuela de gladiadores en Roma. Entrénalos, equípalos y llévalos a la gloria.</div>
+      <div class="help-grid">
+        ${card('🏛️', 'Entrenan solos', 'En la ficha de cada gladiador eliges qué atributo entrena. Progresan aunque cierres el juego. Si se agotan, descansan solos.')}
+        ${card('⚔️', 'Tú preparas, ellos luchan', 'En la Arena eliges sede, modalidad, equipo y táctica. El combate es automático. Fíjate en la probabilidad de victoria.')}
+        ${card('✨', 'Habilidades al azar', 'Al subir de nivel pueden aprender una habilidad aleatoria o mejorar una que ya tienen.')}
+        ${card('🛡️', 'Botín y equipo', 'Ganar da objetos. Equípalos desde la ficha o la Armería y fórjalos para hacerlos más fuertes.')}
+        ${card('⭐', 'Fama y sedes', 'Cada victoria da fama. Con más fama se abren arenas mejores y ganas más oro pasivo.')}
+        ${card('🏗️', 'Haz crecer el ludus', 'Gasta denarios en Mejoras y reclutas. Las misiones dan laureles para reliquias permanentes.')}
+      </div>
+      <div class="dim small" style="text-align:center;margin-bottom:12px">Sigue el <b class="gold">📜 Objetivo</b> (arriba a la izquierda): te guía paso a paso y da premios.</div>
+      <div class="row" style="justify-content:center"><button class="btn big" data-m="ok">${first ? '¡A por la gloria!' : 'Entendido'}</button></div></div>`, true);
   }
 
   // ── eventos de progreso ──────────────────────────────────────────────────
@@ -721,12 +787,12 @@ export class UI {
       case 'wound': if (gl) v = fmtTime(gl.wounded / (1 + st.b.infirmary * 0.15)); break;
       case 'prog': if (gl) w = gl.activity === k[2] ? gl.prog[k[2]] : 0; break;
       case 'stat': if (gl) v = String(gl.stats[k[2]]); break;
-      case 'act': if (gl) v = gl.wounded > 0 ? `🩹 Herido (${fmtTime(gl.wounded / (1 + st.b.infirmary * 0.15))})` : ACT_NAMES[gl.activity]; break;
+      case 'act': if (gl) v = gl.wounded > 0 ? `🩹 Herido (${fmtTime(gl.wounded / (1 + st.b.infirmary * 0.15))})` : gl.resting ? '💤 Agotado: descansando…' : ACT_NAMES[gl.activity]; break;
       case 'mk': v = fmtTime(st.marketT); break;
     }
     if (text && v != null && e.textContent !== v) e.textContent = v;
     if (!text && w != null) e.style.width = (clamp(w, 0, 1) * 100).toFixed(1) + '%';
   }
 
-  tick() { this.live(); this.renderRoster(); }
+  tick() { this.live(); this.renderRoster(); this.renderObjective(); }
 }

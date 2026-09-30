@@ -281,6 +281,22 @@ export function grantXp(g, amount, game) {
   return events;
 }
 
+// ── objetivos guiados (tutorial) ────────────────────────────────────────────
+export const OBJECTIVES = [
+  { text: 'Toca el retrato de un gladiador (abajo) para abrir su ficha', tab: null, roster: true, check: (g, f) => f.opened, reward: { gold: 30 } },
+  { text: 'En su ficha, toca un atributo para elegir qué entrena', tab: 'ludus', check: (g, f) => f.trainSet, reward: { gold: 40 } },
+  { text: 'Pulsa «Arena» y gana tu primer combate', tab: 'arena', check: g => g.state.stats.wins >= 1, reward: { gold: 80 } },
+  { text: 'En «Mejoras», mejora el Patio de Entrenamiento', tab: 'build', check: g => g.state.b.yard >= 1, reward: { gold: 80 } },
+  { text: 'Gana 3 combates en total', tab: 'arena', check: g => g.state.stats.wins >= 3, progress: g => [g.state.stats.wins, 3], reward: { gold: 120 } },
+  { text: 'Equipa un objeto desde la «Armería» (o la ficha del gladiador)', tab: 'armory', check: (g, f) => f.equipped, reward: { gold: 100 } },
+  { text: 'Recluta un tercer gladiador en «Reclutar»', tab: 'market', check: g => g.state.gladiators.length >= 3, reward: { gold: 120 } },
+  { text: 'Completa y reclama una misión en «Legado»', tab: 'legacy', check: g => g.state.questsDone >= 1, reward: { laurels: 1 } },
+  { text: 'Reúne 120 ⭐ de fama para abrir el Anfiteatro Provincial', tab: 'arena', check: g => g.state.fame >= 120, progress: g => [g.state.fame, 120], reward: { gold: 250 } },
+  { text: 'Gana un combate de Melé 3v3', tab: 'arena', check: g => (g.state.stats.meleeWins || 0) >= 1, reward: { gold: 400 } },
+  { text: 'Compra una Reliquia en «Legado» con tus laureles', tab: 'legacy', check: g => Object.values(g.state.relics).some(v => v > 0), reward: { laurels: 1 } },
+  { text: 'Lleva a un gladiador al nivel 10 y manumítelo (Legado)', tab: 'legacy', check: g => g.state.rudis >= 1, progress: g => [Math.max(0, ...g.state.gladiators.map(x => x.level)), 10], reward: { laurels: 2 } },
+];
+
 // ── mundo / estado ──────────────────────────────────────────────────────────
 const SAVE_KEY = 'ludus-aeterna-v1';
 
@@ -306,7 +322,7 @@ export class Game {
       stats: { fights: 0, wins: 0, gold: 0, kills: 0, bestVenue: 0, trained: 0 },
       settings: { quality: 1, sound: true, music: true, auto: false, speed: 1, shake: true },
       lastTick: Date.now(), playtime: 0, lastSquad: null, lastSetup: null,
-      tutorial: { intro: false },
+      tutorial: { intro: false, step: 0, flags: {} },
       laurels: 0, quests: [], questsDone: 0, eventT: 240,
       relics: { gold: 0, xp: 0, train: 0, vigor: 0, crit: 0, market: 0 },
     };
@@ -318,7 +334,7 @@ export class Game {
     try { s = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { s = null; }
     if (s && s.v === 1) {
       const def = this.newState();
-      this.state = { ...def, ...s, b: { ...def.b, ...s.b }, stats: { ...def.stats, ...s.stats }, relics: { ...def.relics, ...(s.relics || {}) }, settings: { ...def.settings, ...s.settings }, tutorial: { ...def.tutorial, ...s.tutorial } };
+      this.state = { ...def, ...s, b: { ...def.b, ...s.b }, stats: { ...def.stats, ...s.stats }, relics: { ...def.relics, ...(s.relics || {}) }, settings: { ...def.settings, ...s.settings }, tutorial: { ...def.tutorial, ...s.tutorial, flags: { ...(s.tutorial?.flags || {}) } } };
       for (const g of this.state.gladiators) { g.grow ||= { str: 0, agi: 0, vit: 0, tec: 0, wil: 0 }; g.prog ||= { str: 0, agi: 0, vit: 0, tec: 0, wil: 0 }; }
       const away = (Date.now() - (s.lastTick || Date.now())) / 1000;
       this.offline = null;
@@ -360,7 +376,7 @@ export class Game {
     RELIC_MOD.hp = st.relics.vigor * 0.03; RELIC_MOD.crit = st.relics.crit * 0.01;
   }
 
-  fatigueEff(g) { return g.fatigue < 70 ? 1 : 1 - (g.fatigue - 70) / 30 * 0.75; }
+  fatigueEff(g) { return 1; }
   trainRate(g) {
     const st = this.state;
     return (1 + st.b.yard * 0.12) * (1 + st.rudis * 0.05) * (1 + st.relics.train * 0.08) * this.fatigueEff(g);
@@ -377,9 +393,14 @@ export class Game {
     const rest = 1 + st.b.infirmary * 0.15;
     for (const g of st.gladiators) {
       if (g.wounded > 0) { g.wounded = Math.max(0, g.wounded - dt * rest); g.fatigue = Math.max(0, g.fatigue - dt * 0.6 * rest); continue; }
-      if (g.activity === 'rest') { g.fatigue = Math.max(0, g.fatigue - dt * 1.4 * rest); continue; }
+      if (g.activity === 'rest' || g.resting) {
+        g.fatigue = Math.max(0, g.fatigue - dt * 1.4 * rest);
+        if (g.resting && g.fatigue <= 5) g.resting = false; // vuelve a entrenar solo
+        continue;
+      }
       const stat = g.activity;
       g.fatigue = Math.min(100, g.fatigue + dt * 0.45);
+      if (g.fatigue >= 100) { g.resting = true; continue; } // agotado: descansa automáticamente
       g.prog[stat] += dt * this.trainRate(g) * (g.talent === stat ? 1.3 : 1) / this.trainNeed(g, stat);
       let guard = 0;
       while (g.prog[stat] >= 1 && guard++ < 50) {
@@ -389,6 +410,7 @@ export class Game {
       }
     }
     st.marketT -= dt;
+    if (st.marketT <= 0) this.refreshMarket(true);
     st.eventT -= dt;
     this.recalc();
   }
@@ -505,6 +527,18 @@ export class Game {
     g.wounded = 0;
     return true;
   }
+
+  /** Comprueba el objetivo actual; devuelve el objetivo cumplido (y aplica su premio) o null */
+  checkObjective() {
+    const st = this.state, T = st.tutorial;
+    const o = OBJECTIVES[T.step];
+    if (!o || !o.check(this, T.flags)) return null;
+    T.step++;
+    if (o.reward.gold) st.gold += o.reward.gold;
+    if (o.reward.laurels) st.laurels += o.reward.laurels;
+    return o;
+  }
+  flag(k) { this.state.tutorial.flags[k] = true; }
 
   // ── misiones y reliquias ─────────────────────────────────────────────────
   questTarget(t) {
@@ -628,7 +662,7 @@ export function rewardFor(venueIdx, modeId, foes, won, hype, squad) {
   const rounds = mode.rounds || 1;
   let gold = (25 + 14 * Math.pow(avgLv, 1.25)) * venue.gold * mode.mult * (foes.length > 1 && !mode.boss ? 1 : 1);
   gold *= 1 + hype * 0.5;
-  const fame = (5 + avgLv * 1.5) * mode.mult * (0.6 + venueIdx * 0.25);
+  const fame = (10 + avgLv * 2.5) * mode.mult * (1 + venueIdx * 0.5);
   const xp = (14 + avgLv * 9) * (mode.xpMult || mode.mult * 0.75 + 0.25);
   return { gold: won ? gold : gold * 0.12, fame: won ? fame : fame * 0.12, xp: won ? xp : xp * 0.4 };
 }

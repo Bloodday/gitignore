@@ -143,6 +143,7 @@ export class ArenaView {
     cv.addEventListener('pointerdown', e => { if (!this.director.free) return; this.drag = { x: e.clientX, y: e.clientY, yaw: this.director.freeYaw, pitch: this.director.freePitch }; });
     window.addEventListener('pointermove', e => { if (!this.drag) return; this.director.freeYaw = this.drag.yaw - (e.clientX - this.drag.x) * 0.006; this.director.freePitch = Math.min(1.25, Math.max(0.05, this.drag.pitch + (e.clientY - this.drag.y) * 0.004)); });
     window.addEventListener('pointerup', () => { this.drag = null; });
+    cv.addEventListener('click', () => { if (this.phase === 'intro') this.skipIntro = true; });
     cv.addEventListener('wheel', e => { if (this.director.free) { this.director.freeDist = Math.min(40, Math.max(6, this.director.freeDist * (1 + e.deltaY * 0.001))); e.preventDefault(); } }, { passive: false });
   }
 
@@ -174,7 +175,7 @@ export class ArenaView {
     const foes = cfg.rounds[this.roundIdx];
     for (const g of squad) { g._hpFrac = this.carry.get(g.id)?.frac ?? 1; }
     for (const g of foes) g._hpFrac = 1;
-    this.battle = new Battle([squad, foes], { hype: 0.15 });
+    this.battle = new Battle([squad, foes], { hype: 0.15, tactic: this.cfg.tactic });
     this.battle.views = this.views;
     for (const f of this.battle.fighters) this.views.push(new FighterView(this, f));
     for (const v of this.views) {
@@ -183,13 +184,13 @@ export class ArenaView {
     }
     // entrada desde las puertas
     const gates = this.colo.gates;
-    this.phase = 'intro'; this.introT = 0;
+    this.phase = 'intro'; this.introT = 0; this.skipIntro = false;
     this.views.forEach((v, i) => {
       const f = v.f;
       const gate = gates.find(g => Math.abs(Math.sin(g.angle) * (f.team === 0 ? -1 : 1) - 1) < 0.01) || gates[0];
       v.introFrom = new V(gate.inner.x, 0, gate.inner.z);
       v.introTo = new V(f.x, 0, f.z);
-      v.introDelay = 0.3 + (i % 3) * 0.35;
+      v.introDelay = 0.15 + (i % 3) * 0.25;
       v.override = true; v.overrideSpeed = 0;
       v.avatar.root.position.copy(v.introFrom);
     });
@@ -217,7 +218,7 @@ export class ArenaView {
       this.processEvents();
       if (this.phase === 'outro') {
         this.outroT += dtBase;
-        if (this.outroT > 3.4) this.endRound();
+        if (this.outroT > 2.8) this.endRound();
       }
     }
     for (const v of this.views) v.update(this.phase === 'idle' && !this.lingering ? 0 : (this.phase === 'idle' ? realDt : dt), realDt, this.eng.camera, w, h);
@@ -234,9 +235,10 @@ export class ArenaView {
   updateIntro(dt) {
     this.introT += dt;
     const T = this.introT;
-    const dur = 4.2;
+    const dur = this.skipIntro ? Math.min(T, 1.2) : 3.4;
+    if (this.skipIntro && T < 1.2) this.introT = 1.2;
     for (const v of this.views) {
-      const k = Math.min(1, Math.max(0, (T - v.introDelay) / 2.6));
+      const k = this.skipIntro ? 1 : Math.min(1, Math.max(0, (T - v.introDelay) / 2.2));
       const e = ease(k);
       const p = new V().lerpVectors(v.introFrom, v.introTo, e);
       v.avatar.root.position.set(p.x, 0, p.z);
@@ -248,7 +250,7 @@ export class ArenaView {
       if (k >= 0.97) { v.avatar.root.rotation.y += ((v.f.yaw - v.avatar.root.rotation.y) * Math.min(1, dt * 6)); }
     }
     // cámara de presentación
-    const a = Math.min(1, T / 3.6);
+    const a = this.skipIntro ? 1 : Math.min(1, T / 3.1);
     const pos = new V(Math.sin(0.6 + a * 1.2) * (30 - a * 18), 24 - a * 19, Math.cos(0.6 + a * 1.2) * (30 - a * 18));
     this.rig.set(pos, new V(0, 1.4, 0), 46 - a * 8, 6);
     if (T > dur) {

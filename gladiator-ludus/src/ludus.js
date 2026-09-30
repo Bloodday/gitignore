@@ -308,11 +308,11 @@ export class LudusCrowd {
     // asigna ranuras por estación
     const counts = {};
     for (const g of gladiators) {
-      const act = g.wounded > 0 ? 'rest' : g.activity;
+      const act = g.wounded > 0 || g.resting ? 'rest' : g.activity;
       const e = this.entries.get(g.id);
       const n = (counts[act] = (counts[act] ?? -1) + 1);
       e.act = act; e.slot = n;
-      e.target = this.slotPos(act, n, gladiators.filter(x => (x.wounded > 0 ? 'rest' : x.activity) === act).length);
+      e.target = this.slotPos(act, n, gladiators.filter(x => (x.wounded > 0 || x.resting ? 'rest' : x.activity) === act).length);
     }
   }
 
@@ -415,7 +415,7 @@ export class LudusCrowd {
       let mode;
       if (!arrived) mode = 'combat';
       else if (g.wounded > 0) mode = 'train:wil';
-      else mode = g.activity === 'rest' ? 'train:rest' : 'train:' + g.activity;
+      else mode = g.activity === 'rest' || g.resting ? 'train:rest' : 'train:' + g.activity;
       if (an.mode !== mode) { an.mode = mode; an.t = 0; }
       av.root.position.set(e.pos.x, 0, e.pos.z);
       av.root.rotation.y = e.yaw;
@@ -432,7 +432,7 @@ export class LudusCrowd {
 
   updateProps(e, arrived, t) {
     const B = e.avatar.bones;
-    const act = arrived && e.g.wounded <= 0 ? e.g.activity : 'none';
+    const act = arrived && e.g.wounded <= 0 && !e.g.resting ? e.g.activity : 'none';
     if (act === 'str') {
       if (!e.stone) { e.stone = new THREE.Mesh(this.stoneGeo, this.stoneMat); e.stone.castShadow = true; B.chest.add(e.stone); }
       const k = (Math.sin(e.anim.t * 1.7) + 1) / 2, ee = k * k * (3 - 2 * k);
@@ -465,16 +465,17 @@ export class LudusCrowd {
     e.el.style.display = vis ? '' : 'none';
     if (!vis) return;
     e.el.style.transform = `translate(${(p.x * 0.5 + 0.5) * w}px, ${(-p.y * 0.5 + 0.5) * h}px) translate(-50%, -100%)`;
-    const act = g.wounded > 0 ? 'w' : g.activity;
+    const act = g.wounded > 0 ? 'w' : g.resting ? 'rest' : g.activity;
     const icons = { str: '💪', agi: '🏃', vit: '❤️', tec: '🎯', wil: '🔥', rest: '💤', w: '🩹' };
     const label = `${icons[act]} ${g.name}`;
     if (e._label !== label + g.level) { e._label = label + g.level; e.name.innerHTML = `<span class="lv">${g.level}</span>${label}`; }
     let prog = 0;
     if (g.wounded > 0) prog = 1 - Math.min(1, g.wounded / 120);
+    else if (g.resting) prog = 1 - g.fatigue / 100;
     else if (g.activity !== 'rest') prog = g.prog[g.activity];
     else prog = 1 - g.fatigue / 100;
     e.bar.style.width = (Math.min(1, prog) * 100).toFixed(0) + '%';
-    e.bar.style.background = g.wounded > 0 ? '#e0566a' : g.activity === 'rest' ? '#6fd18a' : '';
+    e.bar.style.background = g.wounded > 0 ? '#e0566a' : (g.activity === 'rest' || g.resting) ? '#6fd18a' : '';
     e.el.classList.toggle('sel', this.selected === g.id);
     e.el.classList.toggle('tired', g.fatigue > 70 && g.activity !== 'rest');
   }

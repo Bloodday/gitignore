@@ -133,10 +133,7 @@ class App {
     }
     if (!st.tutorial.intro) {
       st.tutorial.intro = true;
-      setTimeout(() => {
-        this.ui.openTab('ludus');
-        this.ui.hint('Elige un atributo para entrenar. Con los primeros denarios, mejora el ludus o recluta más gladiadores. Cuando estés listo, ¡entra a la arena!', 9000);
-      }, 900);
+      setTimeout(() => this.ui.showHelp(true), 700);
     }
   }
 
@@ -193,8 +190,8 @@ class App {
     this.game.save();
     // rondas: si el torneo trae varias, `foes` ya es una lista por ronda
     const rounds = cfg.foes;
-    const match = { squad: cfg.squad, rounds, venue, modeName: mode.name };
-    await this.flyTo(() => ({ pos: new V(Math.sin(0.6) * 30, 24, Math.cos(0.6) * 30), look: new V(0, 2, 0), fov: 46 }), 3.2, [new V(0, 14, 86), new V(0, 40, 62), new V(6, 38, 46)]);
+    const match = { squad: cfg.squad, rounds, venue, modeName: mode.name, tactic: cfg.tactic };
+    await this.flyTo(() => ({ pos: new V(Math.sin(0.6) * 30, 24, Math.cos(0.6) * 30), look: new V(0, 2, 0), fov: 46 }), 2.3, [new V(0, 14, 86), new V(0, 40, 62), new V(6, 38, 46)]);
     this.mode = 'arena';
     const res = await this.arena.runMatch(match);
     this.mode = 'result';
@@ -247,6 +244,7 @@ class App {
     const hypeBonus = res.hype * 0.5;
     st.gold += gold; st.stats.gold += gold; st.fame += fame;
     if (won && cfg.boss) st.stats.bosses = (st.stats.bosses || 0) + 1;
+    if (won && cfg.modeId === 'melee') st.stats.meleeWins = (st.stats.meleeWins || 0) + 1;
     st.stats.fights++; if (won) { st.stats.wins++; st.stats.bestVenue = Math.max(st.stats.bestVenue, cfg.venueIdx); if (venue.endless) st.stats.eternal = (st.stats.eternal || 0) + 1; }
     const levelEvents = [];
     const wounded = [];
@@ -265,7 +263,6 @@ class App {
       if (!carry || carry.dead) wnd = 40 + g.level * 5;
       else if (carry.frac < 0.5) wnd = (1 - carry.frac) * (16 + g.level * 2);
       if (wnd > 0) { g.wounded = Math.max(g.wounded, wnd); wounded.push(g); }
-      if (g.wounded > 0) g.activity = 'rest';
     }
     const avgLv = allFoes.reduce((a, f) => a + f.level, 0) / allFoes.length;
     const loot = rollLoot(game, cfg.venueIdx, cfg.modeId, avgLv, won || roundsWon > 0, cfg.boss);
@@ -314,14 +311,14 @@ class App {
         this.arena.clear();
         document.getElementById('ui').classList.add('hidden');
         this.mode = 'arena';
-        const cfg = { venueIdx: setup.venueIdx, modeId: setup.modeId, squad, foes, boss };
+        const cfg = { venueIdx: setup.venueIdx, modeId: setup.modeId, squad, foes, boss, tactic: setup.tactic };
         this.cfg = cfg;
-        const res = await this.arena.runMatch({ squad, rounds: foes, venue: VENUES[setup.venueIdx], modeName: MODES[setup.modeId].name });
+        const res = await this.arena.runMatch({ squad, rounds: foes, venue: VENUES[setup.venueIdx], modeName: MODES[setup.modeId].name, tactic: setup.tactic });
         this.mode = 'result';
         const sum = this.resolveFight(cfg, res); this.lastSummary = sum; this.showResult(sum);
         return;
       }
-      if (v === 'auto') this.ui.toast('⏸️', 'Combate automático detenido: el equipo no está en forma.', 'bad');
+      this.ui.toast('🩹', v === 'auto' ? 'Combate automático detenido: tu equipo está herido y debe recuperarse.' : 'Tu equipo está herido: deja que se recupere (o cúralo en su ficha) antes de volver.', 'bad');
     }
     this.returnToLudus();
   }
@@ -341,7 +338,7 @@ class App {
     const tgt = this.ludusCam.target.clone();
     const dd = 32, yw = 0.25, pt = 0.36;
     const endPos = new V(Math.sin(yw) * Math.cos(pt) * dd, Math.sin(pt) * dd, Math.cos(yw) * Math.cos(pt) * dd).add(tgt);
-    await this.flyTo(() => ({ pos: endPos, look: tgt, fov: 40 }), 3.0, [new V(6, 30, 40), new V(0, 26, 80)]);
+    await this.flyTo(() => ({ pos: endPos, look: tgt, fov: 40 }), 2.2, [new V(6, 30, 40), new V(0, 26, 80)]);
     this.crowd.setVisible(true);
     this.ludusCam.enabled = true;
     this.mode = 'ludus';
@@ -363,7 +360,10 @@ class App {
     // progreso incremental (sigue corriendo en cualquier modo)
     this.game.tick(dt);
     this.uiT += dt; this.lastSave += dt;
-    if (this.uiT > 0.25) { this.uiT = 0; this.ui.tick(); this.syncIfChanged(); }
+    if (this.uiT > 0.25) {
+      this.uiT = 0; this.ui.tick(); this.syncIfChanged();
+      if (this.mode === 'ludus' || this.mode === 'result') { const o = this.game.checkObjective(); if (o) this.ui.onObjective(o); }
+    }
     if (this.lastSave > 15) { this.lastSave = 0; this.game.save(); }
     if (this.mode === 'ludus' && this.st.eventT <= 0 && !this.ui.modalOpen && this.st.gladiators.length) { this.st.eventT = 240 + Math.random() * 200; this.ui.showEvent(); }
 
@@ -401,7 +401,7 @@ class App {
 
   syncIfChanged() {
     const n = this.st.gladiators.length;
-    const sig = this.st.gladiators.map(g => g.id + g.activity + (g.wounded > 0 ? 'w' : '')).join();
+    const sig = this.st.gladiators.map(g => g.id + g.activity + (g.wounded > 0 ? 'w' : '') + (g.resting ? 'r' : '')).join();
     if (sig !== this._sig) { this._sig = sig; this.syncCrowd(); }
     // avatares: al subir de nivel se mantiene el modelo
   }

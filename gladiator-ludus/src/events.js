@@ -26,7 +26,7 @@ export const EVENTS = [
     text: g => 'Varios esclavos enferman. Un buen médico podría evitar que la fiebre se extienda.',
     choices: g => [
       { label: 'Pagar al médico', cost: Math.round(80 + g.incomeRate * 120), run: () => ({ msg: 'El médico controla la fiebre. No hay bajas.' }) },
-      { label: 'Ignorarla', run: () => { const v = pick(g.state.gladiators); if (v) { v.wounded = Math.max(v.wounded, 50 + v.level * 4); v.activity = 'rest'; return { msg: `${v.name} cae enfermo y debe reposar.` }; } return { msg: 'Nada ocurre.' }; } },
+      { label: 'Ignorarla', run: () => { const v = pick(g.state.gladiators); if (v) { v.wounded = Math.max(v.wounded, 50 + v.level * 4); return { msg: `${v.name} cae enfermo y debe reposar.` }; } return { msg: 'Nada ocurre.' }; } },
     ],
   },
   {

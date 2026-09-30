@@ -40,6 +40,10 @@ export class Fighter {
     const cs = combatStats(def);
     const boss = def.isBoss;
     if (boss) { cs.hp *= boss.hpMul; cs.dmgMin *= boss.dmgMul; cs.dmgMax *= boss.dmgMul; cs.armor *= 1.2; cs.moveSpeed *= 0.9; }
+    // táctica elegida por el jugador (sólo su equipo)
+    const tac = team === 0 ? battle.tactic : null;
+    if (tac === 'aggressive') { cs.dmgMin *= 1.2; cs.dmgMax *= 1.2; cs.armor *= 0.85; cs.moveSpeed *= 1.1; cs.interval *= 0.92; }
+    if (tac === 'defensive') { cs.armor *= 1.25; cs.dmgMin *= 0.88; cs.dmgMax *= 0.88; if (cs.block) cs.block = Math.min(0.6, cs.block + 0.08); else cs.dodge = Math.min(0.45, cs.dodge + 0.05); }
     this.cs = cs;
     this.size = boss ? boss.size : 1;
     this.radius = 0.42 * this.size;
@@ -87,6 +91,7 @@ export class Battle {
     this.events = [];
     this.time = 0;
     this.hype = opts.hype ?? 0.2;
+    this.tactic = opts.tactic || null;
     this.fighters = [];
     this.teams = teams.map((list, ti) => list.map((g, i) => {
       const f = new Fighter(this, g, ti, i);
@@ -585,10 +590,10 @@ export class Battle {
 }
 
 // ── estimación Monte Carlo de la probabilidad de victoria ──────────────────
-export function estimateWin(teamA, teamB, n = 10) {
+export function estimateWin(teamA, teamB, n = 10, opts = {}) {
   let wins = 0;
   for (let i = 0; i < n; i++) {
-    const b = new Battle([teamA.map(g => ({ ...g, _hpFrac: g._hpFrac ?? 1 })), teamB.map(g => ({ ...g }))], {});
+    const b = new Battle([teamA.map(g => ({ ...g, _hpFrac: g._hpFrac ?? 1 })), teamB.map(g => ({ ...g }))], opts);
     b.start();
     let guard = 0;
     while (b.winner == null && guard++ < 4000) { b.step(0.05); b.events.length = 0; }
