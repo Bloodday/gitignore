@@ -177,7 +177,7 @@ export class FX {
       const v = new V((Math.random() - 0.5) * 6, Math.random() * 4 + 1, (Math.random() - 0.5) * 6).addScaledVector(dir, 4 + Math.random() * 5);
       this.spark(pos, v, { life: 0.3 + Math.random() * 0.4, s0: 0.12 + Math.random() * 0.06, s1: 0.0, color, grav: 10 });
     }
-    this.glow(pos, { s0: big ? 1.4 : 0.8, s1: big ? 3.4 : 1.8, life: 0.18, color: '#fff2d0' });
+    this.glow(pos, { s0: big ? 0.5 : 0.3, s1: big ? 1.3 : 0.8, life: 0.14, color: '#ffe2b0', alpha: 0.45 });
     this.flash(pos, big ? 26 : 12, 0.12, '#ffd9a0');
   }
   clang(pos, dir) {
@@ -185,7 +185,7 @@ export class FX {
       const v = new V((Math.random() - 0.5) * 8, Math.random() * 4 + 0.5, (Math.random() - 0.5) * 8).addScaledVector(dir, 2);
       this.spark(pos, v, { life: 0.25 + Math.random() * 0.3, s0: 0.1, s1: 0, color: '#cfe8ff', grav: 8 });
     }
-    this.glow(pos, { s0: 1.0, s1: 2.6, life: 0.14, color: '#d8ecff' });
+    this.glow(pos, { s0: 0.4, s1: 1.1, life: 0.12, color: '#d8ecff', alpha: 0.4 });
     this.flash(pos, 14, 0.1, '#d8ecff');
   }
   dust(pos, n = 10, spread = 1, size = 0.9, color = '#d6b88a') {

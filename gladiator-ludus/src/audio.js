@@ -172,6 +172,7 @@ export class GameAudio {
     }
   }
   drum(v, when) {
+    if (!this.ctx) return;
     const ctx = this.ctx, t = ctx.currentTime + Math.max(0, when);
     const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(130, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.25);
     const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.5 * v, t + 0.01); g.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
