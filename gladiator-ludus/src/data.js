@@ -80,13 +80,13 @@ export const SLOT_ORDER = ['weapon', 'offhand', 'helm', 'armor', 'greaves', 'cha
 // dmg: [min,max] base por nivel de objeto · interval: segundos entre ataques · reach: alcance en metros
 export const BASES = {
   weapon: {
-    gladius: { name: 'Gladius', dmg: [8, 12], interval: 1.05, reach: 1.9, style: 'slash', wind: 0.32, hands: 1 },
-    sica: { name: 'Sica', dmg: [7, 11], interval: 0.85, reach: 1.8, style: 'slash', wind: 0.26, hands: 1, crit: 0.05 },
-    sicae: { name: 'Sicas gemelas', dmg: [7, 10], interval: 0.62, reach: 1.75, style: 'flurry', wind: 0.2, hands: 2, dual: true },
-    hasta: { name: 'Hasta', dmg: [9, 14], interval: 1.25, reach: 2.9, style: 'thrust', wind: 0.36, hands: 1 },
-    tridens: { name: 'Tridente', dmg: [13, 18], interval: 1.2, reach: 3.1, style: 'thrust', wind: 0.36, hands: 1 },
-    bipennis: { name: 'Bipennis', dmg: [15, 22], interval: 1.65, reach: 2.2, style: 'cleave', wind: 0.5, hands: 2 },
-    malleus: { name: 'Malleus', dmg: [13, 19], interval: 1.5, reach: 1.95, style: 'cleave', wind: 0.44, hands: 1 },
+    gladius: { name: 'Gladius', dmg: [8, 12], interval: 1.05, reach: 1.15, style: 'slash', wind: 0.32, hands: 1 },
+    sica: { name: 'Sica', dmg: [7, 11], interval: 0.85, reach: 1.1, style: 'slash', wind: 0.26, hands: 1, crit: 0.05 },
+    sicae: { name: 'Sicas gemelas', dmg: [7, 10], interval: 0.62, reach: 1.05, style: 'flurry', wind: 0.2, hands: 2, dual: true },
+    hasta: { name: 'Hasta', dmg: [9, 14], interval: 1.25, reach: 2.0, style: 'thrust', wind: 0.36, hands: 1 },
+    tridens: { name: 'Tridente', dmg: [13, 18], interval: 1.2, reach: 2.1, style: 'thrust', wind: 0.36, hands: 1 },
+    bipennis: { name: 'Bipennis', dmg: [15, 22], interval: 1.65, reach: 1.5, style: 'cleave', wind: 0.5, hands: 2 },
+    malleus: { name: 'Malleus', dmg: [13, 19], interval: 1.5, reach: 1.3, style: 'cleave', wind: 0.44, hands: 1 },
   },
   offhand: {
     scutum: { name: 'Scutum', armor: 6, block: 0.22, weight: 1 },

@@ -279,7 +279,18 @@ export class ArenaView {
           v.schedule(e.windT + 0.22, () => v.setTrail(key, false));
           break;
         }
-        case 'whiff': break;
+        case 'whiff': { const v = this.viewOf(e.tgt); if (v) { fx.float('Fallo', v.headPos, 'dodge'); v.anim.playReact('dodge'); } break; }
+        case 'feint': break;
+        case 'clash': {
+          const va = this.viewOf(e.a), vb = this.viewOf(e.b);
+          const p = new V((e.a.x + e.b.x) / 2, 1.4, (e.a.z + e.b.z) / 2);
+          fx.clang(p, new V(0, 1, 0)); fx.hitSparks(p, new V(0, 1, 0), true, '#fff2c0'); fx.ring(new V(p.x, 0, p.z), 2.2, '#fff0d0', 0.4, 0.3);
+          au.clang(1.6); rig.shake(0.6); rig.fovPunch(1); this.hitStop = Math.max(this.hitStop, 0.12); this.slow = 0.35; this.slowT = 0.3;
+          va?.anim.playReact('clash'); vb?.anim.playReact('clash'); fx.float('¡Choque!', new V(p.x, 2.6, p.z), 'skillname');
+          for (const v of [va, vb]) if (v) for (const k of ['weaponR', 'weaponL']) v.setTrail(k, false);
+          break;
+        }
+        case 'knockdown': { const v = this.viewOf(e.f); if (v) { v.anim.playReact('knockdown'); fx.dust(new V(e.f.x, 0, e.f.z), 14, 2.5, 1.2); fx.float('¡Derribado!', v.headPos, 'skillname'); au.thud(); rig.shake(0.7); } break; }
         case 'hop': { const v = this.viewOf(e.f); if (v) { v.anim.playReact('dodge'); fx.dust(new V(e.f.x, 0, e.f.z), 4, 1.2, 0.6); } break; }
         case 'hit': this.onHit(e); break;
         case 'miss': {
@@ -313,9 +324,11 @@ export class ArenaView {
     const vs = this.viewOf(src), vd = this.viewOf(dst);
     const fx = this.fx, au = this.audio, rig = this.rig;
     if (!vd) return;
-    const p = new V(dst.x, (vd.avatar.height || 1.8) * 0.62, dst.z);
     const dir = new V(dst.x - src.x, 0, dst.z - src.z).normalize();
-    p.addScaledVector(dir, -0.25);
+    const p = new V(dst.x, (vd.avatar.height || 1.8) * 0.62, dst.z).addScaledVector(dir, -dst.radius * 0.9);
+    // si conocemos la punta del arma, el impacto se dibuja donde está el filo (acotado al cuerpo del rival)
+    const tip = vs && vs.avatar.tips && (vs.avatar.tips.weaponR || vs.avatar.tips.weaponL);
+    if (tip && e.basic) { const w = new V(); tip.tip.getWorldPosition(w); if (w.distanceTo(p) < 1.2) p.lerp(w, 0.6); }
     const frac = dmg / dst.maxHp;
     if (blocked) {
       fx.clang(p, dir); au.clang(1); vd.anim.playReact('block');

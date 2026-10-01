@@ -176,7 +176,7 @@ export const RELIC_MOD = { hp: 0, crit: 0 };
 export function combatStats(g) {
   const s = totalStats(g);
   const wi = g.equip.weapon;
-  const wb = wi ? BASES.weapon[wi.base] : { name: 'Puños', dmg: [3, 5], interval: 0.9, reach: 1.4, style: 'slash', wind: 0.22, hands: 1 };
+  const wb = wi ? BASES.weapon[wi.base] : { name: 'Puños', dmg: [3, 5], interval: 0.9, reach: 0.9, style: 'slash', wind: 0.22, hands: 1 };
   const [wmin, wmax] = wi ? weaponDmg(wi) : [3, 5];
   const off = g.equip.offhand && wb.hands === 1 ? BASES.offhand[g.equip.offhand.base] : null;
   const offItem = off ? g.equip.offhand : null;

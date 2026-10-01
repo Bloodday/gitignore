@@ -177,7 +177,7 @@ export class Battle {
     if (!tgt) { f.state = 'idle'; return; }
 
     const d = dist2(f, tgt) - f.radius - tgt.radius;
-    const reach = f.cs.reach * (f.size > 1 ? 1.25 : 1);
+    const reach = this.reachOf(f);
     this.faceTo(f, tgt.x - f.x, tgt.z - f.z, dt, 10);
     if (d <= reach * 0.92) {
       if (f.attackCd <= 0) this.beginAttack(f);
@@ -190,6 +190,7 @@ export class Battle {
           const sp = f.cs.moveSpeed * 0.55 * this.slowMul(f);
           f.x += (-dz / L) * f.strafe * sp * dt; f.z += (dx / L) * f.strafe * sp * dt;
           // retroceso si está demasiado cerca con arma larga
+          if (Math.random() < dt * 1.3) { const s2 = Math.random() < 0.5 ? 1 : -1; f.vx += (dx / L) * 3.5 * s2; f.vz += (dz / L) * 3.5 * s2; this.emit({ t: 'feint', f }); }
           if (d < reach * 0.4 && f.cs.style === 'thrust') { f.x -= (dx / L) * sp * 1.2 * dt; f.z -= (dz / L) * sp * 1.2 * dt; }
         }
       }
@@ -207,6 +208,8 @@ export class Battle {
     if (f.state !== 'move') f.speedNow = 0;
     this.clampArena(f);
   }
+
+  reachOf(f) { return f.cs.reach * (f.size > 1 ? f.size * 0.95 : 1); }
 
   slowMul(f) { return f.has('slow') ? 1 - f.buffVal('slow', 0.35) : 1; }
 
@@ -272,6 +275,9 @@ export class Battle {
     const windT = opts.dur ? dur * 0.45 : Math.min(cs.wind * (heavy ? 1.5 : 1) / Math.sqrt(haste), dur * 0.62);
     f.atk = { dur, windT, hit: false, hand: f.hand, t: 0, style: cs.style, riposte: !!opts.riposte, heavy };
     f.lastAtk = this.time;
+    // si el rival también está armando un golpe contra mí, a veces las armas chocan
+    const t = f.target;
+    if (t && t.state === 'windup' && t.target === f && t.atk && !opts.riposte && Math.random() < 0.2) { f.atk.clash = true; t.atk.clash = true; }
     f.hand = 1 - f.hand;
     f.state = 'windup'; f.t = 0;
     f.attackCd = interval;
@@ -282,19 +288,28 @@ export class Battle {
     const a = f.atk;
     if (!a) { f.state = 'idle'; return; }
     a.t += dt;
-    // sigue orientándose al objetivo durante el amago
-    if (f.target?.alive && a.t < a.windT) this.faceTo(f, f.target.x - f.x, f.target.z - f.z, dt, 14);
+    const tgt0 = f.target;
+    if (tgt0?.alive && a.t < a.windT) {
+      this.faceTo(f, tgt0.x - f.x, tgt0.z - f.z, dt, 14);
+      // paso adelante durante el amago para que el arma llegue al cuerpo
+      const d = dist2(f, tgt0) - f.radius - tgt0.radius, gap = this.reachOf(f) * 0.5;
+      if (d > gap && !f.has('root')) {
+        const dx = tgt0.x - f.x, dz = tgt0.z - f.z, L = Math.hypot(dx, dz) || 1;
+        const sp = Math.min(8, (d - gap) / Math.max(0.05, a.windT - a.t));
+        f.x += dx / L * sp * dt; f.z += dz / L * sp * dt; this.clampArena(f);
+      }
+    }
     if (!a.hit && a.t >= a.windT) {
       a.hit = true;
       f.state = 'strike';
       const tgt = f.target;
       if (tgt && tgt.alive) {
         const d = dist2(f, tgt) - f.radius - tgt.radius;
-        if (d <= f.cs.reach * 1.25) this.basicHit(f, tgt);
-        else this.emit({ t: 'whiff', f });
+        if (a.clash && tgt.atk?.clash && tgt.state === 'windup' && d < this.reachOf(tgt) * 1.1) this.clash(f, tgt);
+        else if (d <= this.reachOf(f) * 1.02) this.basicHit(f, tgt);
+        else this.emit({ t: 'whiff', f, tgt });
       }
-      // avance con el golpe
-      { const L = a.heavy ? 4.2 : f.cs.style === 'thrust' ? 2.4 : 2.8; f.vx += Math.sin(f.yaw) * L; f.vz += Math.cos(f.yaw) * L; }
+      { const L = a.heavy ? 2.2 : 1.0; f.vx += Math.sin(f.yaw) * L; f.vz += Math.cos(f.yaw) * L; }
     }
     if (a.t >= a.windT + 0.12 && f.state === 'strike') f.state = 'recover';
     if (a.t >= a.dur) {
@@ -335,14 +350,25 @@ export class Battle {
     if (!extra.noAvoid && Math.random() < tgt.cs.block) { blocked = true; dmg *= 1 - tgt.cs.blockAbsorb; this.maybeRiposte(tgt, f); }
     this.applyDamage(f, tgt, dmg, { crit, blocked, basic: true, heavy, knock: heavy ? 6.5 : undefined, ignoreArmor: extra.ignoreArmor, skill: extra.skill });
     f.combo = heavy ? 0 : (f.combo || 0) + 1;
-    if (heavy && !blocked && tgt.alive && tgt.size < 1.3) tgt.addBuff('stun', 0.45, 1, f);
+    if ((heavy || crit) && !blocked && tgt.alive && tgt.size < 1.3 && Math.random() < (heavy ? 0.35 : 0.08)) { tgt.addBuff('stun', 1.15, 1, f); tgt.atk = null; tgt.cast = null; tgt.state = 'stun'; this.emit({ t: 'knockdown', f: tgt }); }
+    else if (heavy && !blocked && tgt.alive && tgt.size < 1.3) tgt.addBuff('stun', 0.45, 1, f);
+  }
+
+  clash(a, b) {
+    for (const [x, y] of [[a, b], [b, a]]) {
+      const dx = x.x - y.x, dz = x.z - y.z, L = Math.hypot(dx, dz) || 1;
+      x.vx += dx / L * 5.5; x.vz += dz / L * 5.5;
+      x.atk = null; x.state = 'idle'; x.attackCd = 0.35; x.combo = 0;
+    }
+    this.emit({ t: 'clash', a, b });
+    this.addHype(0.06);
   }
 
   maybeRiposte(tgt, atk) {
     if (tgt.cs.riposte && tgt.alive && !tgt.atk && tgt.state !== 'cast' && Math.random() < tgt.cs.riposte) {
       tgt.target = atk;
       const d = dist2(tgt, atk) - tgt.radius - atk.radius;
-      if (d < tgt.cs.reach * 1.4) { tgt.attackCd = 0; this.beginAttack(tgt, { dur: 0.4, riposte: true }); this.emit({ t: 'riposte', f: tgt }); }
+      if (d < this.reachOf(tgt) * 1.3) { tgt.attackCd = 0; this.beginAttack(tgt, { dur: 0.4, riposte: true }); this.emit({ t: 'riposte', f: tgt }); }
     }
   }
 

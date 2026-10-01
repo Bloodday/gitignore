@@ -150,6 +150,13 @@ const CAST = {
     { t: 0, d: {} }, { t: 0.25, d: { shR: [-1.6, 0.0, -0.9], elR: [-0.3, 0, 0], shL: [-0.2, 0.0, 1.0], elL: [-0.2, 0, 0], spine: [-0.25, 0, 0], head: [-0.3, 0, 0] } },
     { t: 0.6, d: { shR: [-1.6, 0.0, -0.9], elR: [-0.3, 0, 0], shL: [-0.2, 0.0, 1.0], elL: [-0.2, 0, 0], spine: [-0.25, 0, 0], head: [-0.3, 0, 0] } }, { t: 0.8, d: {} }] },
 };
+CAST.knockdown = { dur: 1.15, keys: [
+  { t: 0, d: {} },
+  { t: 0.16, d: { P: [0, -0.55, -0.35], spine: [-0.85, 0, 0.1], head: [-0.4, 0, 0], hipL: [-1.3, 0, 0.1], hipR: [-1.1, 0, -0.1], kneeL: [0.9, 0, 0], kneeR: [1.3, 0, 0], shR: [0.6, 0, -0.9], shL: [0.6, 0, 0.9], elR: [-0.3, 0, 0], elL: [-0.3, 0, 0] } },
+  { t: 0.7, d: { P: [0, -0.6, -0.35], spine: [-0.7, 0, 0.05], head: [-0.1, 0, 0], hipL: [-1.35, 0, 0.1], hipR: [-1.2, 0, -0.1], kneeL: [1.2, 0, 0], kneeR: [1.5, 0, 0], shR: [0.9, 0, -0.5], shL: [0.9, 0, 0.5], elR: [-0.6, 0, 0], elL: [-0.6, 0, 0] } },
+  { t: 0.95, d: { P: [0, -0.3, -0.1], spine: [0.5, 0, 0], hipL: [-0.9, 0, 0], kneeL: [1.2, 0, 0], kneeR: [0.9, 0, 0], shR: [0.3, 0, -0.3], shL: [0.3, 0, 0.3] } },
+  { t: 1.15, d: {} }] };
+CAST.clash = { dur: 0.45, keys: [{ t: 0, d: {} }, { t: 0.08, d: { spine: [-0.35, 0, 0], shR: [-0.6, 0, -0.3], elR: [0.3, 0, 0], P: [0, -0.05, -0.15], head: [-0.2, 0, 0] } }, { t: 0.45, d: {} }] };
 CAST.hit = { dur: 0.3, keys: [{ t: 0, d: {} }, { t: 0.06, d: { spine: [-0.3, 0.1, 0], head: [-0.25, 0, 0], P: [0, 0, -0.06], shR: [0.3, 0, 0], shL: [0.3, 0, 0] } }, { t: 0.3, d: {} }] };
 CAST.block = { dur: 0.3, keys: [{ t: 0, d: {} }, { t: 0.05, d: { shL: [-0.25, 0, 0.0], elL: [-0.25, 0, 0], spine: [-0.1, 0, 0], P: [0, 0, -0.05] } }, { t: 0.3, d: {} }] };
 CAST.dodge = { dur: 0.4, keys: [{ t: 0, d: {} }, { t: 0.12, d: { spine: [0.15, 0.0, 0.5], hips: [0, 0, -0.3], P: [0.22, -0.1, 0], head: [0, 0, -0.3] } }, { t: 0.4, d: {} }] };
@@ -262,6 +269,7 @@ export class Animator {
     this.spinAcc = 0;
   }
   playReact(id) { // golpe / bloqueo / esquiva: se superpone levemente sin cancelar ataques
+    if (id === 'knockdown' || id === 'clash') { const def = CAST[id]; this.action = { name: id, t: 0, dur: def.dur, keys: def.keys, timeScale: 1 }; return; }
     if (this.action && this.action.name !== 'react') return;
     const def = CAST[id]; if (!def) return;
     this.action = { name: 'react', t: 0, dur: def.dur, keys: def.keys, timeScale: 1 };
@@ -327,7 +335,7 @@ export class Animator {
         b.shR[0] += -s * 0.12 * a; b.shL[0] += s * 0.22 * a;
         b.P[1] += -0.04 * a; b.kneeL[0] += 0.0; 
       }
-      if (this.stunned) { b.head[0] += 0.45; b.spine[0] += 0.3 + Math.sin(this.t * 14) * 0.03; b.shR[0] = 0.1; b.shL[0] = 0.1; b.elR[0] = -0.3; b.elL[0] = -0.3; b.hips[2] += Math.sin(this.t * 9) * 0.12; b.P[1] -= 0.05; }
+      if (this.stunned && !(this.action && this.action.name === 'knockdown')) { b.head[0] += 0.45; b.spine[0] += 0.3 + Math.sin(this.t * 14) * 0.03; b.shR[0] = 0.1; b.shL[0] = 0.1; b.elR[0] = -0.3; b.elL[0] = -0.3; b.hips[2] += Math.sin(this.t * 9) * 0.12; b.P[1] -= 0.05; }
       if (this.mode === 'victory') {
         this.vt = (this.vt || 0) + dt;
         const k = smooth(this.vt / 0.5);
